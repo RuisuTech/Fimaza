@@ -15,8 +15,8 @@ interface AuthContextType {
 }
 
 const INITIAL_USERS: User[] = [
-  { id: '1', email: 'admin@inventario.com', password: 'admin123', name: 'Administrador', role: 'admin' },
-  { id: '2', email: 'user@inventario.com', password: 'user123', name: 'Colaborador', role: 'colaborador' },
+  { id: '1', email: 'admin@inventario.com', password: 'admin123', name: 'Carlos Admin', role: 'admin', employeeId: 1 },
+  { id: '2', email: 'user@inventario.com', password: 'user123', name: 'Maria Vendedor', role: 'colaborador', employeeId: 2 },
 ];
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -46,7 +46,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadUsers = async () => {
     try {
       const stored = await AsyncStorage.getItem(USERS_KEY);
-      if (stored) setUsers(JSON.parse(stored));
+      if (stored) {
+        const storedUsers = JSON.parse(stored) as User[];
+        const merged = [...INITIAL_USERS];
+        for (const su of storedUsers) {
+          if (!merged.some(u => u.email === su.email)) {
+            merged.push(su);
+          }
+        }
+        setUsers(merged);
+      }
     } catch {}
   };
 

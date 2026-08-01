@@ -6,6 +6,7 @@ export interface User {
   password: string;
   name: string;
   role: Role;
+  employeeId?: number;
 }
 
 export interface AuthState {
@@ -14,28 +15,4 @@ export interface AuthState {
   isAuthenticated: boolean;
 }
 
-export interface Product {
-  id: string;
-  name: string;
-  sku: string;
-  quantity: number;
-  minStock: number;
-  location: string;
-  category: string;
-  brand: string;
-  size: string;
-  color: string;
-}
-
-export interface Sale {
-  id: string;
-  productId: string;
-  productName: string;
-  productSku: string;
-  quantity: number;
-  unitPrice: number;
-  total: number;
-  buyer: string;
-  userId: string;
-  timestamp: string;
-}
+export * from './database';

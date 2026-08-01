@@ -13,46 +13,48 @@ export default function LandingScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
       
-      <View style={[styles.content, { paddingTop: insets.top + Spacing.xxxxl }]}>
-        <View style={styles.hero}>
-          <View style={styles.iconWrapper}>
-            <View style={styles.iconCircle}>
-              <Ionicons name="cube" size={48} color={Colors.light.accent} />
+      <View style={styles.content}>
+        <View style={styles.inner}>
+          <View style={styles.hero}>
+            <View style={styles.iconWrapper}>
+              <View style={styles.iconCircle}>
+                <Ionicons name="cube" size={48} color={Colors.light.accent} />
+              </View>
             </View>
-          </View>
-          
-          <Text style={styles.brand}>FimazaSys</Text>
-          <Text style={styles.tagline}>Gestion de inventario inteligente</Text>
-        </View>
-
-        <View style={styles.features}>
-          <View style={styles.featureRow}>
-            <View style={[styles.featureIcon, { backgroundColor: Colors.light.accentLight }]}>
-              <Ionicons name="analytics-outline" size={22} color={Colors.light.accent} />
-            </View>
-            <View style={styles.featureText}>
-              <Text style={styles.featureTitle}>Dashboard en tiempo real</Text>
-              <Text style={styles.featureDesc}>Metricas y KPIs al instante</Text>
-            </View>
+            
+            <Text style={styles.brand}>FimazaSys</Text>
+            <Text style={styles.tagline}>Gestion de inventario inteligente</Text>
           </View>
 
-          <View style={styles.featureRow}>
-            <View style={[styles.featureIcon, { backgroundColor: Colors.light.successLight }]}>
-              <Ionicons name="cube-outline" size={22} color={Colors.light.success} />
+          <View style={styles.features}>
+            <View style={styles.featureRow}>
+              <View style={[styles.featureIcon, { backgroundColor: Colors.light.accentLight }]}>
+                <Ionicons name="analytics-outline" size={22} color={Colors.light.accent} />
+              </View>
+              <View style={styles.featureText}>
+                <Text style={styles.featureTitle}>Dashboard en tiempo real</Text>
+                <Text style={styles.featureDesc}>Metricas y KPIs al instante</Text>
+              </View>
             </View>
-            <View style={styles.featureText}>
-              <Text style={styles.featureTitle}>Control de stock</Text>
-              <Text style={styles.featureDesc}>Alertas de stock bajo automaticas</Text>
-            </View>
-          </View>
 
-          <View style={styles.featureRow}>
-            <View style={[styles.featureIcon, { backgroundColor: Colors.light.warningLight }]}>
-              <Ionicons name="receipt-outline" size={22} color={Colors.light.warning} />
+            <View style={styles.featureRow}>
+              <View style={[styles.featureIcon, { backgroundColor: Colors.light.successLight }]}>
+                <Ionicons name="cube-outline" size={22} color={Colors.light.success} />
+              </View>
+              <View style={styles.featureText}>
+                <Text style={styles.featureTitle}>Control de stock</Text>
+                <Text style={styles.featureDesc}>Alertas de stock bajo automaticas</Text>
+              </View>
             </View>
-            <View style={styles.featureText}>
-              <Text style={styles.featureTitle}>Registro de ventas</Text>
-              <Text style={styles.featureDesc}>Historial completo de transacciones</Text>
+
+            <View style={styles.featureRow}>
+              <View style={[styles.featureIcon, { backgroundColor: Colors.light.warningLight }]}>
+                <Ionicons name="receipt-outline" size={22} color={Colors.light.warning} />
+              </View>
+              <View style={styles.featureText}>
+                <Text style={styles.featureTitle}>Registro de ventas</Text>
+                <Text style={styles.featureDesc}>Historial completo de transacciones</Text>
+              </View>
             </View>
           </View>
         </View>
@@ -81,7 +83,13 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: Spacing.xxl,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  inner: {
+    width: '100%',
+    maxWidth: 480,
   },
   hero: {
     alignItems: 'center',
@@ -147,13 +155,15 @@ const styles = StyleSheet.create({
     color: Colors.light.textSecondary,
   },
   bottom: {
-    paddingHorizontal: Spacing.xxl,
-    paddingTop: Spacing.lg,
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+    paddingBottom: Spacing.xl,
   },
   loginButton: {
     backgroundColor: Colors.light.accent,
     borderRadius: BorderRadius.md,
     paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.xxxxl,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

@@ -7,6 +7,9 @@ import { ProductsProvider } from '@/context/ProductsContext';
 import { ActivityProvider } from '@/context/ActivityContext';
 import { SalesProvider } from '@/context/SalesContext';
 import { SettingsProvider } from '@/context/SettingsContext';
+import { CatalogsProvider } from '@/context/CatalogsContext';
+import { UsersProvider } from '@/context/UsersContext';
+import { InventoryProvider } from '@/context/InventoryContext';
 import { Colors } from '@/constants/theme';
 
 function RootLayoutNav() {
@@ -18,12 +21,12 @@ function RootLayoutNav() {
     if (isLoading) return;
 
     const inAuthGroup = segments[0] === '(admin)' || segments[0] === '(collaborator)';
-    const inPublicRoute = segments[0] === 'login' || segments[0] === undefined;
+    const inLoginRoute = segments[0] === 'login';
 
     if (!user && inAuthGroup) {
       router.dismissAll();
       router.replace('/login');
-    } else if (user && inPublicRoute) {
+    } else if (user && inLoginRoute) {
       const route = user.role === 'admin' ? '/(admin)' : '/(collaborator)';
       router.replace(route);
     }
@@ -50,16 +53,22 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <SettingsProvider>
-        <ActivityProvider>
-          <ProductsProvider>
-            <SalesProvider>
-              <RootLayoutNav />
-              <StatusBar style="auto" />
-            </SalesProvider>
-          </ProductsProvider>
-        </ActivityProvider>
-      </SettingsProvider>
+      <CatalogsProvider>
+        <UsersProvider>
+          <SettingsProvider>
+            <ActivityProvider>
+              <ProductsProvider>
+                <InventoryProvider>
+                  <SalesProvider>
+                    <RootLayoutNav />
+                    <StatusBar style="auto" />
+                  </SalesProvider>
+                </InventoryProvider>
+              </ProductsProvider>
+            </ActivityProvider>
+          </SettingsProvider>
+        </UsersProvider>
+      </CatalogsProvider>
     </AuthProvider>
   );
 }

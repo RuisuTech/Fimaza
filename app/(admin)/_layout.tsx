@@ -6,6 +6,7 @@ export default function AdminLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="productos" options={{ headerShown: false }} />
+      <Stack.Screen name="inventario" options={{ headerShown: false }} />
       <Stack.Screen name="ventas" options={{ headerShown: false }} />
       <Stack.Screen name="usuarios" options={{ headerShown: false }} />
       <Stack.Screen name="config" options={{ headerShown: false }} />

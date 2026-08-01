@@ -4,6 +4,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export interface Settings {
   systemName: string;
   isDarkMode: boolean;
+  businessName: string;
+  businessAddress: string;
+  businessPhone: string;
+  igvRate: number;
+  yapeNumber: string;
 }
 
 interface SettingsContextType {
@@ -16,6 +21,11 @@ const SETTINGS_KEY = '@fimazasys_settings';
 const DEFAULT_SETTINGS: Settings = {
   systemName: 'FimazaSys',
   isDarkMode: false,
+  businessName: 'FIMAZA',
+  businessAddress: 'Av. Principal 123',
+  businessPhone: '999 888 777',
+  igvRate: 18,
+  yapeNumber: '999 888 777',
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, TextInput, FlatList, StyleSheet } from 'react-native';
+import { View, Text, TextInput, FlatList, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useProducts } from '@/context/ProductsContext';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -13,6 +13,7 @@ export default function BuscarScreen() {
   const C = useThemeColors();
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
 
   const filtered = useMemo(() =>
     products.filter(p =>
@@ -29,14 +30,18 @@ export default function BuscarScreen() {
         <Text style={[styles.subtitle, { color: C.textSecondary }]}>{t('search.subtitle')}</Text>
       </View>
 
-      <View style={[styles.searchWrapper, { backgroundColor: C.surface, borderColor: C.border }]}>
+      <View style={[styles.searchWrapper, { backgroundColor: C.surface, borderColor: searchFocused ? C.accent : C.border }]}>
         <Ionicons name="search" size={18} color={C.textMuted} />
         <TextInput
-          style={[styles.searchInput, { color: C.text }]}
+          style={[styles.searchInput, { color: C.text, borderWidth: 0, backgroundColor: 'transparent' }, Platform.OS === 'web' ? { outline: 'none', appearance: 'none' } : null]}
           placeholder={t('search.placeholder')}
           placeholderTextColor={C.textMuted}
           value={search}
           onChangeText={setSearch}
+          onFocus={() => setSearchFocused(true)}
+          onBlur={() => setSearchFocused(false)}
+          underlineColorAndroid="transparent"
+          selectionColor={C.accent}
           autoFocus
         />
         {search.length > 0 && (

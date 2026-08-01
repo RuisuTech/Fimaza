@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ScrollView,
   Modal,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -31,6 +32,7 @@ export default function MovimientosScreen() {
   const [type, setType] = useState<'entrada' | 'salida'>('entrada');
   const [modalVisible, setModalVisible] = useState(false);
   const [search, setSearch] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
   const [alertState, setAlertState] = useState<{ visible: boolean; type: 'success' | 'error'; title: string; message: string }>({
     visible: false, type: 'error', title: '', message: '',
   });
@@ -82,14 +84,18 @@ export default function MovimientosScreen() {
         <Text style={[styles.subtitle, { color: C.textSecondary }]}>{t('movements.subtitle')}</Text>
       </View>
 
-      <View style={[styles.searchWrapper, { backgroundColor: C.surface, borderColor: C.border }]}>
+      <View style={[styles.searchWrapper, { backgroundColor: C.surface, borderColor: searchFocused ? C.accent : C.border }]}>
         <Ionicons name="search" size={18} color={C.textMuted} />
         <TextInput
-          style={[styles.searchInput, { color: C.text }]}
+          style={[styles.searchInput, { color: C.text, borderWidth: 0, backgroundColor: 'transparent' }, Platform.OS === 'web' ? { outline: 'none', appearance: 'none' } : null]}
           placeholder={t('movements.searchPlaceholder')}
           placeholderTextColor={C.textMuted}
           value={search}
           onChangeText={setSearch}
+          onFocus={() => setSearchFocused(true)}
+          onBlur={() => setSearchFocused(false)}
+          underlineColorAndroid="transparent"
+          selectionColor={C.accent}
         />
       </View>
 
@@ -108,7 +114,7 @@ export default function MovimientosScreen() {
         ))}
       </ScrollView>
 
-      <Modal visible={modalVisible} animationType="slide" transparent>
+      <Modal visible={modalVisible} animationType="fade" transparent>
         <View style={[styles.modalOverlay, { backgroundColor: C.overlay }]}>
           <View style={[styles.modalContent, { backgroundColor: C.surface }]}>
             <View style={styles.modalHeader}>
@@ -179,10 +185,9 @@ const styles = StyleSheet.create({
   cardInfo: { flex: 1 },
   cardName: { fontSize: FontSize.md, fontWeight: FontWeight.semibold },
   cardMeta: { fontSize: FontSize.sm, marginTop: 2 },
-  modalOverlay: { flex: 1, justifyContent: 'flex-end' },
+  modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
   modalContent: {
-    borderTopLeftRadius: BorderRadius.xl,
-    borderTopRightRadius: BorderRadius.xl, padding: Spacing.lg,
+    borderRadius: BorderRadius.xl, padding: Spacing.lg, width: '90%', maxWidth: 400,
   },
   modalHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.lg,

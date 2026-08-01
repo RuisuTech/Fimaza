@@ -24,6 +24,8 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const { login } = useAuth();
   const { log } = useActivity();
   const insets = useSafeAreaInsets();
@@ -68,10 +70,10 @@ export default function LoginScreen() {
         <View style={styles.form}>
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: C.text }]}>{t('login.email')}</Text>
-            <View style={[styles.inputWrapper, { backgroundColor: C.surface, borderColor: C.border }]}>
+            <View style={[styles.inputWrapper, { backgroundColor: C.surface, borderColor: emailFocused ? C.accent : C.border }]}> 
               <Ionicons name="mail-outline" size={20} color={C.textMuted} style={styles.inputIcon} />
               <TextInput
-                style={[styles.input, { color: C.text }]}
+                style={[styles.input, { color: C.text, borderWidth: 0, backgroundColor: 'transparent' }, Platform.OS === 'web' ? { outline: 'none', appearance: 'none' } : null]}
                 placeholder={t('login.emailPlaceholder')}
                 placeholderTextColor={C.textMuted}
                 value={email}
@@ -80,22 +82,30 @@ export default function LoginScreen() {
                 autoCapitalize="none"
                 autoCorrect={false}
                 autoComplete="email"
+                onFocus={() => setEmailFocused(true)}
+                onBlur={() => setEmailFocused(false)}
+                underlineColorAndroid="transparent"
+                selectionColor={C.accent}
               />
             </View>
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: C.text }]}>{t('login.password')}</Text>
-            <View style={[styles.inputWrapper, { backgroundColor: C.surface, borderColor: C.border }]}>
+            <View style={[styles.inputWrapper, { backgroundColor: C.surface, borderColor: passwordFocused ? C.accent : C.border }]}> 
               <Ionicons name="lock-closed-outline" size={20} color={C.textMuted} style={styles.inputIcon} />
               <TextInput
-                style={[styles.input, { color: C.text }]}
+                style={[styles.input, { color: C.text, borderWidth: 0, backgroundColor: 'transparent' }, Platform.OS === 'web' ? { outline: 'none', appearance: 'none' } : null]}
                 placeholder={t('login.passwordPlaceholder')}
                 placeholderTextColor={C.textMuted}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
                 autoComplete="password"
+                onFocus={() => setPasswordFocused(true)}
+                onBlur={() => setPasswordFocused(false)}
+                underlineColorAndroid="transparent"
+                selectionColor={C.accent}
               />
               <TouchableOpacity
                 style={styles.eyeButton}
@@ -214,6 +224,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     borderWidth: 1,
     paddingHorizontal: Spacing.md,
+    overflow: 'hidden',
   },
   inputIcon: {
     marginRight: Spacing.sm,
@@ -222,6 +233,8 @@ const styles = StyleSheet.create({
     flex: 1,
     height: TouchTarget.comfortable,
     fontSize: FontSize.md,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
   },
   eyeButton: {
     width: TouchTarget.minimum,

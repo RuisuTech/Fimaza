@@ -1,182 +1,199 @@
-import React, { useMemo, useCallback, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, RefreshControl } from 'react-native';
-import { useRouter } from 'expo-router';
+import React, { useMemo } from 'react';
+import { View, Text, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useProducts } from '@/context/ProductsContext';
 import { useSales } from '@/context/SalesContext';
-import { useActivity, Activity } from '@/context/ActivityContext';
+import { useInventory } from '@/context/InventoryContext';
 import { useAuth } from '@/context/AuthContext';
-import { KPICard, ActivityItem } from '@/components/ui';
 import DashboardLayout from '@/components/DashboardLayout';
 import { adminNavItems } from '@/constants/navigation';
-import { Spacing, FontSize, FontWeight } from '@/constants/theme';
+import { Spacing, BorderRadius, FontSize, FontWeight, Shadows } from '@/constants/theme';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { useTranslation } from '@/hooks/useTranslation';
 
 export default function AdminDashboard() {
-  const { products } = useProducts();
-  const { sales, totalSales } = useSales();
-  const { activities } = useActivity();
+  const { products, variants, inventory } = useProducts();
+  const { sales, getTodaySales } = useSales();
+  const { movements } = useInventory();
   const { user } = useAuth();
-  const router = useRouter();
-  const [refreshing, setRefreshing] = useState(false);
   const C = useThemeColors();
   const { t } = useTranslation();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
 
-  const kpiData = useMemo(() => {
-    const lowStock = products.filter(p => p.quantity <= p.minStock);
-    const today = new Date().toDateString();
-    const salesToday = sales.filter(s => new Date(s.timestamp).toDateString() === today);
-    const totalUnits = products.reduce((sum, p) => sum + p.quantity, 0);
+  const stats = useMemo(() => {
+    const todaySales = getTodaySales();
+    const todayRevenue = todaySales.reduce((sum, s) => sum + s.total_venta, 0);
+    const todayProfit = todaySales.reduce((sum, sale) => {
+      return sum + (sale.detalles || []).reduce((dSum, d) => {
+        const v = variants.find(va => va.id === d.id_variante);
+        const pc = v?.precio_compra || 0;
+        return dSum + ((d.precio_unitario - pc) * d.cantidad);
+      }, 0);
+    }, 0);
+    const totalProfit = sales.reduce((sum, sale) => {
+      return sum + (sale.detalles || []).reduce((dSum, d) => {
+        const v = variants.find(va => va.id === d.id_variante);
+        const pc = v?.precio_compra || 0;
+        return dSum + ((d.precio_unitario - pc) * d.cantidad);
+      }, 0);
+    }, 0);
+    const totalStock = inventory.reduce((sum, inv) => sum + inv.stock_actual, 0);
+    const lowStock = inventory.filter(inv => inv.stock_actual <= inv.stock_minimo);
+    const recentSales = [...sales].sort((a, b) => new Date(b.fecha_venta).getTime() - new Date(a.fecha_venta).getTime()).slice(0, 5);
+    const recentMovements = [...movements].sort((a, b) => new Date(b.fecha_movimiento).getTime() - new Date(a.fecha_movimiento).getTime()).slice(0, 5);
 
-    return [
-      {
-        id: '1',
-        title: t('dashboard.products'),
-        value: products.length,
-        icon: 'cube-outline' as const,
-        color: C.accent,
-        trend: lowStock.length > 0 ? { value: lowStock.length, isPositive: false } : undefined,
-      },
-      {
-        id: '2',
-        title: t('dashboard.units'),
-        value: totalUnits.toLocaleString(),
-        icon: 'layers-outline' as const,
-        color: C.success,
-      },
-      {
-        id: '3',
-        title: t('dashboard.salesToday'),
-        value: salesToday.length,
-        icon: 'cart-outline' as const,
-        color: C.warning,
-      },
-      {
-        id: '4',
-        title: t('dashboard.revenue'),
-        value: `S/ ${totalSales.toFixed(0)}`,
-        icon: 'cash-outline' as const,
-        color: C.success,
-      },
-    ];
-  }, [products, sales, totalSales, t, C]);
+    return { todaySales: todaySales.length, todayRevenue, todayProfit, totalProfit, totalStock, lowStockCount: lowStock.length, recentSales, recentMovements };
+  }, [inventory, sales, movements, variants, getTodaySales]);
 
-  const recentActivities = useMemo(() => activities.slice(0, 8), [activities]);
+  const getProductName = (variantId: number) => {
+    const variant = variants.find(v => v.id === variantId);
+    const product = variant ? products.find(p => p.id === variant.id_producto) : null;
+    return product?.nombre || 'Producto';
+  };
 
-  const handleRefresh = useCallback(() => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
-  }, []);
+  const formatDate = (iso: string) => {
+    const d = new Date(iso);
+    return `${d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })} ${d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+  };
 
-  const handleKPICardPress = useCallback((index: number) => {
-    const routes = ['/(admin)', '/(admin)/productos', '/(admin)/ventas', '/(admin)/ventas'];
-    router.push(routes[index] as any);
-  }, [router]);
-
-  const renderActivityItem = useCallback(({ item }: { item: Activity }) => (
-    <ActivityItem activity={item} />
-  ), []);
-
-  const keyExtractor = useCallback((item: Activity) => item.id, []);
-
-  const ListHeader = useMemo(() => (
-    <View>
-      <View style={styles.greetingRow}>
-        <View>
-          <Text style={[styles.greeting, { color: C.text }]}>{t('dashboard.greeting')}, {user?.name?.split(' ')[0] || 'Admin'}</Text>
-          <Text style={[styles.subtitle, { color: C.textSecondary }]}>{t('dashboard.summary')}</Text>
-        </View>
-      </View>
-
-      <View style={styles.kpiGrid}>
-        {kpiData.map((item, index) => (
-          <View key={item.id} style={styles.kpiWrapper}>
-            <KPICard
-              title={item.title}
-              value={item.value}
-              icon={item.icon}
-              color={item.color}
-              trend={item.trend}
-              onPress={() => handleKPICardPress(index)}
-            />
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: C.text }]}>{t('dashboard.recentActivity')}</Text>
-        <Text style={[styles.sectionCount, { color: C.textMuted }]}>{recentActivities.length} {t('dashboard.registers')}</Text>
-      </View>
-    </View>
-  ), [kpiData, handleKPICardPress, recentActivities.length, user, t, C]);
+  const kpis = [
+    { title: t('dashboard.salesToday'), value: stats.todaySales.toString(), icon: 'cart-outline', color: C.accent, bg: C.accentLight },
+    { title: 'Ganancia hoy', value: `S/ ${stats.todayProfit.toFixed(0)}`, icon: 'trending-up-outline', color: C.success, bg: C.successLight },
+    { title: 'Ganancia total', value: `S/ ${stats.totalProfit.toFixed(0)}`, icon: 'wallet-outline', color: C.warning, bg: C.warningLight },
+    { title: t('inventory.lowStock'), value: stats.lowStockCount.toString(), icon: 'alert-circle-outline', color: C.danger, bg: C.dangerLight },
+  ];
 
   return (
     <DashboardLayout items={adminNavItems}>
       <View style={[styles.container, { backgroundColor: C.background }]}>
-        <FlatList
-          data={recentActivities}
-          renderItem={renderActivityItem}
-          keyExtractor={keyExtractor}
-          ListHeaderComponent={ListHeader}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor={C.accent}
-              colors={[C.accent]}
-            />
-          }
-          maxToRenderPerBatch={5}
-          windowSize={5}
-          initialNumToRender={5}
-          removeClippedSubviews={true}
-        />
+        <View style={styles.greetingRow}>
+          <Text style={[styles.greeting, { color: C.text }]}>{t('dashboard.greeting')}, {user?.name?.split(' ')[0] || 'Admin'}</Text>
+          <Text style={[styles.subtitle, { color: C.textSecondary }]}>{t('dashboard.summary')}</Text>
+        </View>
+
+        <View style={[styles.kpiGrid, isDesktop && styles.kpiGridDesktop]}>
+          {kpis.map((kpi, index) => (
+            <View key={index} style={[styles.kpiCard, isDesktop && styles.kpiCardDesktop, { backgroundColor: C.surface, borderColor: C.border }]}>
+              <View style={[styles.kpiIcon, { backgroundColor: kpi.bg }]}>
+                <Ionicons name={kpi.icon as any} size={20} color={kpi.color} />
+              </View>
+              <Text style={[styles.kpiValue, { color: C.text }]}>{kpi.value}</Text>
+              <Text style={[styles.kpiTitle, { color: C.textMuted }]}>{kpi.title}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.row}>
+          <View style={styles.halfSection}>
+            <Text style={[styles.sectionTitle, { color: C.text }]}>{t('sales.title')} recientes</Text>
+            {stats.recentSales.length === 0 ? (
+              <Text style={[styles.emptyText, { color: C.textMuted }]}>{t('sales.empty')}</Text>
+            ) : (
+              <View style={[styles.scrollContainer, { borderColor: C.border, backgroundColor: C.surface }]}>
+              <ScrollView
+                nestedScrollEnabled
+                showsVerticalScrollIndicator={true}
+                indicatorStyle={C.textMuted}
+              >
+                {stats.recentSales.map(sale => {
+                    const saleProfit = (sale.detalles || []).reduce((sum, d) => {
+                      const v = variants.find(va => va.id === d.id_variante);
+                      const pc = v?.precio_compra || 0;
+                      return sum + ((d.precio_unitario - pc) * d.cantidad);
+                    }, 0);
+                    return (
+                    <View key={sale.id} style={[styles.listItem, { backgroundColor: C.surface, borderColor: C.border }]}>
+                      <View style={[styles.listIcon, { backgroundColor: C.successLight }]}>
+                        <Ionicons name="cart" size={16} color={C.success} />
+                      </View>
+                      <View style={styles.listInfo}>
+                        <Text style={[styles.listTitle, { color: C.text }]}>{formatDate(sale.fecha_venta)}</Text>
+                        <Text style={[styles.listMeta, { color: C.textMuted }]}>{sale.detalles?.length || 0} productos</Text>
+                      </View>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={[styles.listValue, { color: C.success }]}>S/ {sale.total_venta.toFixed(2)}</Text>
+                        <Text style={[styles.listMeta, { color: saleProfit >= 0 ? C.success : C.danger }]}>+S/ {saleProfit.toFixed(2)}</Text>
+                      </View>
+                    </View>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.halfSection}>
+            <Text style={[styles.sectionTitle, { color: C.text }]}>{t('inventory.history')}</Text>
+            {stats.recentMovements.length === 0 ? (
+              <Text style={[styles.emptyText, { color: C.textMuted }]}>Sin movimientos</Text>
+            ) : (
+              <View style={[styles.scrollContainer, { borderColor: C.border, backgroundColor: C.surface }]}>
+              <ScrollView
+                nestedScrollEnabled
+                showsVerticalScrollIndicator={true}
+                indicatorStyle={C.textMuted}
+              >
+                {stats.recentMovements.map(mov => {
+                    const isEntrada = mov.id_tipo_movimiento < 3;
+                    return (
+                      <View key={mov.id} style={[styles.listItem, { backgroundColor: C.surface, borderColor: C.border }]}>
+                        <View style={[styles.listIcon, { backgroundColor: isEntrada ? C.successLight : C.dangerLight }]}>
+                          <Ionicons name={isEntrada ? 'arrow-down' : 'arrow-up'} size={16} color={isEntrada ? C.success : C.danger} />
+                        </View>
+                        <View style={styles.listInfo}>
+                          <Text style={[styles.listTitle, { color: C.text }]}>{getProductName(variants.find(v => {
+                            const inv = inventory.find(i => i.id === mov.id_inventario);
+                            return inv && v.id === inv.id_variante;
+                          })?.id || 0)}</Text>
+                          <Text style={[styles.listMeta, { color: C.textMuted }]}>{formatDate(mov.fecha_movimiento)}</Text>
+                        </View>
+                        <Text style={[styles.listValue, { color: isEntrada ? C.success : C.danger }]}>
+                          {isEntrada ? '+' : '-'}{mov.cantidad}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+        </View>
       </View>
     </DashboardLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1, padding: Spacing.xl, paddingBottom: 100 },
+  greetingRow: { marginBottom: Spacing.xl },
+  greeting: { fontSize: FontSize.xxl, fontWeight: FontWeight.bold, marginBottom: 4 },
+  subtitle: { fontSize: FontSize.lg },
+  kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.lg, marginBottom: Spacing.xl },
+  kpiGridDesktop: { flexWrap: 'nowrap' },
+  kpiCard: {
+    width: '47.5%', borderRadius: BorderRadius.lg, padding: Spacing.xl,
+    borderWidth: 1, ...Shadows.sm,
   },
-  listContent: {
-    padding: Spacing.lg,
-    paddingBottom: 100,
+  kpiCardDesktop: {
+    width: 'auto', flex: 1,
   },
-  greetingRow: {
-    marginBottom: Spacing.xl,
+  kpiIcon: { width: 48, height: 48, borderRadius: BorderRadius.md, justifyContent: 'center', alignItems: 'center', marginBottom: Spacing.lg },
+  kpiValue: { fontSize: FontSize.xxl, fontWeight: FontWeight.bold },
+  kpiTitle: { fontSize: FontSize.sm, marginTop: 4 },
+  section: { marginBottom: Spacing.xl },
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.lg, marginBottom: Spacing.xl },
+  halfSection: { flex: 1, minWidth: 280 },
+  scrollContainer: { borderRadius: BorderRadius.lg, borderWidth: 1, padding: Spacing.sm, height: 320 },
+  sectionTitle: { fontSize: FontSize.xl, fontWeight: FontWeight.bold, marginBottom: Spacing.lg },
+  listItem: {
+    flexDirection: 'row', alignItems: 'center', padding: Spacing.lg,
+    borderRadius: BorderRadius.md, marginBottom: Spacing.sm, borderWidth: 1,
   },
-  greeting: {
-    fontSize: FontSize.xxxl,
-    fontWeight: FontWeight.bold,
-    marginBottom: 2,
-  },
-  subtitle: {
-    fontSize: FontSize.md,
-  },
-  kpiGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.md,
-    marginBottom: Spacing.xxl,
-  },
-  kpiWrapper: {
-    width: '47.5%',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  sectionTitle: {
-    fontSize: FontSize.lg,
-    fontWeight: FontWeight.bold,
-  },
-  sectionCount: {
-    fontSize: FontSize.sm,
-  },
+  listIcon: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: Spacing.lg },
+  listInfo: { flex: 1 },
+  listTitle: { fontSize: FontSize.md, fontWeight: FontWeight.semibold },
+  listMeta: { fontSize: FontSize.sm },
+  listValue: { fontSize: FontSize.lg, fontWeight: FontWeight.bold },
+  emptyText: { fontSize: FontSize.md, textAlign: 'center', paddingVertical: Spacing.xl },
 });
