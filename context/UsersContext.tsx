@@ -13,12 +13,12 @@ interface UsersContextType {
 
 const INITIAL_EMPLOYEES: Empleado[] = [
   {
-    id: 1, id_cargo: 1, nombres: 'Carlos', apellidos: 'Admin',
+    id: 1, id_cargo: 1, nombres: 'Usuario', apellidos: 'Admin',
     documento_identidad: '12345678', email: 'admin@inventario.com',
     password_hash: 'admin123', estado: true,
   },
   {
-    id: 2, id_cargo: 2, nombres: 'Maria', apellidos: 'Vendedor',
+    id: 2, id_cargo: 2, nombres: 'Usuario', apellidos: 'Vendedor',
     documento_identidad: '87654321', email: 'user@inventario.com',
     password_hash: 'user123', estado: true,
   },

@@ -15,8 +15,8 @@ interface AuthContextType {
 }
 
 const INITIAL_USERS: User[] = [
-  { id: '1', email: 'admin@inventario.com', password: 'admin123', name: 'Carlos Admin', role: 'admin', employeeId: 1 },
-  { id: '2', email: 'user@inventario.com', password: 'user123', name: 'Maria Vendedor', role: 'colaborador', employeeId: 2 },
+  { id: '1', email: 'admin@inventario.com', password: 'admin123', name: 'Usuario Admin', role: 'admin', employeeId: 1 },
+  { id: '2', email: 'user@inventario.com', password: 'user123', name: 'Usuario Vendedor', role: 'colaborador', employeeId: 2 },
 ];
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,7 +37,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadUser = async () => {
     try {
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      if (stored) setUser(JSON.parse(stored));
+      if (stored) {
+        const storedUser = JSON.parse(stored);
+        const freshUser = INITIAL_USERS.find(u => u.email === storedUser.email);
+        if (freshUser) {
+          setUser({ ...storedUser, name: freshUser.name });
+          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ ...storedUser, name: freshUser.name }));
+        } else {
+          setUser(storedUser);
+        }
+      }
     } catch {} finally {
       setIsLoading(false);
     }
