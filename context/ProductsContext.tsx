@@ -20,66 +20,11 @@ interface ProductsContextType {
   getProductWithVariants: (productId: number) => Producto | undefined;
 }
 
-const INITIAL_PRODUCTS: Producto[] = [
-  { id: 1, id_marca: 1, id_categoria: 1, id_genero: 1, nombre: 'Nike Air Max 90', descripcion: 'Zapatilla clasica de running', estado: true },
-  { id: 2, id_marca: 2, id_categoria: 1, id_genero: 1, nombre: 'Adidas Ultraboost', descripcion: 'Zapatilla de alto rendimiento', estado: true },
-  { id: 3, id_marca: 3, id_categoria: 2, id_genero: 3, nombre: 'New Balance 574', descripcion: 'Zapatilla casual clasica', estado: true },
-  { id: 4, id_marca: 4, id_categoria: 2, id_genero: 1, nombre: 'Puma RS-X', descripcion: 'Zapatilla retro running', estado: true },
-  { id: 5, id_marca: 6, id_categoria: 2, id_genero: 3, nombre: 'Converse Chuck Taylor', descripcion: 'Zapatilla clasica de tela', estado: true },
-  { id: 6, id_marca: 1, id_categoria: 6, id_genero: 1, nombre: 'Nike Dunk Low', descripcion: 'Zapatilla de skateboarding', estado: true },
-  { id: 7, id_marca: 2, id_categoria: 2, id_genero: 3, nombre: 'Adidas Stan Smith', descripcion: 'Zapatilla clasica de cuero', estado: true },
-  { id: 8, id_marca: 7, id_categoria: 6, id_genero: 3, nombre: 'Vans Old Skool', descripcion: 'Zapatilla de skate clasica', estado: true },
-];
+const INITIAL_PRODUCTS: Producto[] = [];
 
-const INITIAL_VARIANTS: ProductoVariante[] = [
-  // Nike Air Max 90
-  { id: 1, id_producto: 1, id_talla: 6, id_color: 2, codigo_barras: 'NK-AM90-001', precio_compra: 280, precio_venta: 450 },
-  { id: 2, id_producto: 1, id_talla: 7, id_color: 2, codigo_barras: 'NK-AM90-002', precio_compra: 280, precio_venta: 450 },
-  { id: 3, id_producto: 1, id_talla: 8, id_color: 1, codigo_barras: 'NK-AM90-003', precio_compra: 280, precio_venta: 450 },
-  // Adidas Ultraboost
-  { id: 4, id_producto: 2, id_talla: 7, id_color: 1, codigo_barras: 'AD-UB-001', precio_compra: 320, precio_venta: 520 },
-  { id: 5, id_producto: 2, id_talla: 8, id_color: 1, codigo_barras: 'AD-UB-002', precio_compra: 320, precio_venta: 520 },
-  // New Balance 574
-  { id: 6, id_producto: 3, id_talla: 7, id_color: 6, codigo_barras: 'NB-574-001', precio_compra: 200, precio_venta: 350 },
-  { id: 7, id_producto: 3, id_talla: 8, id_color: 6, codigo_barras: 'NB-574-002', precio_compra: 200, precio_venta: 350 },
-  { id: 8, id_producto: 3, id_talla: 9, id_color: 6, codigo_barras: 'NB-574-003', precio_compra: 200, precio_venta: 350 },
-  // Puma RS-X
-  { id: 9, id_producto: 4, id_talla: 6, id_color: 4, codigo_barras: 'PM-RSX-001', precio_compra: 180, precio_venta: 300 },
-  // Converse Chuck Taylor
-  { id: 10, id_producto: 5, id_talla: 5, id_color: 1, codigo_barras: 'CV-CT-001', precio_compra: 150, precio_venta: 280 },
-  { id: 11, id_producto: 5, id_talla: 6, id_color: 1, codigo_barras: 'CV-CT-002', precio_compra: 150, precio_venta: 280 },
-  { id: 12, id_producto: 5, id_talla: 7, id_color: 2, codigo_barras: 'CV-CT-003', precio_compra: 150, precio_venta: 280 },
-  // Nike Dunk Low
-  { id: 13, id_producto: 6, id_talla: 8, id_color: 5, codigo_barras: 'NK-DL-001', precio_compra: 260, precio_venta: 420 },
-  // Adidas Stan Smith
-  { id: 14, id_producto: 7, id_talla: 7, id_color: 2, codigo_barras: 'AD-SS-001', precio_compra: 200, precio_venta: 340 },
-  { id: 15, id_producto: 7, id_talla: 8, id_color: 2, codigo_barras: 'AD-SS-002', precio_compra: 200, precio_venta: 340 },
-  // Vans Old Skool
-  { id: 16, id_producto: 8, id_talla: 6, id_color: 1, codigo_barras: 'VN-OS-001', precio_compra: 160, precio_venta: 290 },
-  { id: 17, id_producto: 8, id_talla: 7, id_color: 1, codigo_barras: 'VN-OS-002', precio_compra: 160, precio_venta: 290 },
-  { id: 18, id_producto: 8, id_talla: 8, id_color: 2, codigo_barras: 'VN-OS-003', precio_compra: 160, precio_venta: 290 },
-];
+const INITIAL_VARIANTS: ProductoVariante[] = [];
 
-const INITIAL_INVENTORY: Inventario[] = [
-  { id: 1, id_variante: 1, stock_actual: 12, stock_minimo: 5 },
-  { id: 2, id_variante: 2, stock_actual: 8, stock_minimo: 5 },
-  { id: 3, id_variante: 3, stock_actual: 4, stock_minimo: 5 },
-  { id: 4, id_variante: 4, stock_actual: 10, stock_minimo: 5 },
-  { id: 5, id_variante: 5, stock_actual: 8, stock_minimo: 5 },
-  { id: 6, id_variante: 6, stock_actual: 15, stock_minimo: 5 },
-  { id: 7, id_variante: 7, stock_actual: 10, stock_minimo: 5 },
-  { id: 8, id_variante: 8, stock_actual: 5, stock_minimo: 5 },
-  { id: 9, id_variante: 9, stock_actual: 3, stock_minimo: 5 },
-  { id: 10, id_variante: 10, stock_actual: 20, stock_minimo: 5 },
-  { id: 11, id_variante: 11, stock_actual: 15, stock_minimo: 5 },
-  { id: 12, id_variante: 12, stock_actual: 7, stock_minimo: 5 },
-  { id: 13, id_variante: 13, stock_actual: 2, stock_minimo: 5 },
-  { id: 14, id_variante: 14, stock_actual: 14, stock_minimo: 5 },
-  { id: 15, id_variante: 15, stock_actual: 14, stock_minimo: 5 },
-  { id: 16, id_variante: 16, stock_actual: 18, stock_minimo: 5 },
-  { id: 17, id_variante: 17, stock_actual: 12, stock_minimo: 5 },
-  { id: 18, id_variante: 18, stock_actual: 5, stock_minimo: 5 },
-];
+const INITIAL_INVENTORY: Inventario[] = [];
 
 const KEYS = {
   products: '@db_products',

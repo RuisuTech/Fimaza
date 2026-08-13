@@ -19,25 +19,7 @@ interface SalesContextType {
   getTodaySales: () => VentaCabecera[];
 }
 
-const INITIAL_SALES: VentaCabecera[] = [
-  {
-    id: 1, id_empleado_vendedor: 2, fecha_venta: new Date(Date.now() - 86400000 * 2).toISOString(),
-    subtotal: 754.24, igv: 135.76, total_venta: 890, metodo_pago: 'efectivo', monto_pagado: 900, vuelto: 10,
-    estado: 'Completada',
-    detalles: [
-      { id: 1, id_venta: 1, id_variante: 1, cantidad: 2, precio_unitario: 450, descuento_aplicado: 0, subtotal: 900 },
-    ],
-  },
-  {
-    id: 2, id_empleado_vendedor: 2, fecha_venta: new Date(Date.now() - 86400000 * 1).toISOString(),
-    subtotal: 525.42, igv: 94.58, total_venta: 620, metodo_pago: 'yape',
-    estado: 'Completada',
-    detalles: [
-      { id: 2, id_venta: 2, id_variante: 6, cantidad: 1, precio_unitario: 350, descuento_aplicado: 0, subtotal: 350 },
-      { id: 3, id_venta: 2, id_variante: 10, cantidad: 1, precio_unitario: 280, descuento_aplicado: 10, subtotal: 270 },
-    ],
-  },
-];
+const INITIAL_SALES: VentaCabecera[] = [];
 
 const STORAGE_KEY = '@sales';
 const CART_KEY = '@cart';

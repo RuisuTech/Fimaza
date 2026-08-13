@@ -10,16 +10,7 @@ interface InventoryContextType {
   getMovementsByInventory: (inventoryId: number) => HistorialMovimiento[];
 }
 
-const INITIAL_MOVEMENTS: HistorialMovimiento[] = [
-  { id: 1, id_inventario: 1, id_tipo_movimiento: 1, id_empleado: 1, cantidad: 12, fecha_movimiento: new Date(Date.now() - 86400000 * 5).toISOString(), observaciones: 'Compra inicial' },
-  { id: 2, id_inventario: 2, id_tipo_movimiento: 1, id_empleado: 1, cantidad: 8, fecha_movimiento: new Date(Date.now() - 86400000 * 5).toISOString(), observaciones: 'Compra inicial' },
-  { id: 3, id_inventario: 3, id_tipo_movimiento: 1, id_empleado: 1, cantidad: 4, fecha_movimiento: new Date(Date.now() - 86400000 * 5).toISOString(), observaciones: 'Compra inicial' },
-  { id: 4, id_inventario: 4, id_tipo_movimiento: 1, id_empleado: 1, cantidad: 10, fecha_movimiento: new Date(Date.now() - 86400000 * 4).toISOString(), observaciones: 'Compra inicial' },
-  { id: 5, id_inventario: 1, id_tipo_movimiento: 3, id_empleado: 2, cantidad: 3, fecha_movimiento: new Date(Date.now() - 86400000 * 3).toISOString(), observaciones: 'Venta' },
-  { id: 6, id_inventario: 6, id_tipo_movimiento: 3, id_empleado: 2, cantidad: 5, fecha_movimiento: new Date(Date.now() - 86400000 * 2).toISOString(), observaciones: 'Venta' },
-  { id: 7, id_inventario: 10, id_tipo_movimiento: 3, id_empleado: 2, cantidad: 3, fecha_movimiento: new Date(Date.now() - 86400000 * 1).toISOString(), observaciones: 'Venta' },
-  { id: 8, id_inventario: 1, id_tipo_movimiento: 2, id_empleado: 1, cantidad: 2, fecha_movimiento: new Date(Date.now() - 86400000 * 1).toISOString(), observaciones: 'Devolucion cliente' },
-];
+const INITIAL_MOVEMENTS: HistorialMovimiento[] = [];
 
 const STORAGE_KEY = '@inventory_movements';
 
