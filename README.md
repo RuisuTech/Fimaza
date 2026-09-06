@@ -10,7 +10,6 @@ Aplicación multiplataforma para gestión de inventario de zapatillas, diseñada
 
 - [Node.js](https://nodejs.org/) 18+
 - npm o yarn
-- [Expo CLI](https://docs.expo.dev/get-started/installation/): `npm install -g expo-cli`
 - Para iOS: [CocoaPods](https://cocoapods.org/) + Xcode
 - Para Android: Android Studio + Android SDK
 
@@ -62,19 +61,21 @@ Esto abrirá el Expo DevTools en el navegador. Desde ahí puedes:
 
 ## Stack Tecnológico
 
-| Categoría      | Tecnología                                     |
-| -------------- | ---------------------------------------------- |
-| Framework      | Expo SDK 54 (React Native 0.81.5)              |
-| Router         | expo-router v6                                 |
-| Lenguaje       | TypeScript 5.9.2                               |
-| Estilos        | StyleSheet (React Native) + tema personalizado |
-| Navegación     | @react-navigation/bottom-tabs v7               |
-| Estado         | React Context (9 contextos)                    |
-| Almacenamiento | @react-native-async-storage/async-storage      |
-| Iconos         | @expo/vector-icons (Ionicons)                  |
-| Haptics        | expo-haptics                                   |
-| Animaciones    | react-native-reanimated v4                     |
-| Imágenes       | expo-image v3                                  |
+| Categoría      | Tecnología                                         |
+| -------------- | -------------------------------------------------- |
+| Framework      | Expo SDK 54 (React Native 0.81.5)                 |
+| Router         | expo-router v6                                     |
+| Lenguaje       | TypeScript 5.9.2                                   |
+| Estilos        | NativeWind v4 + TailwindCSS + tema personalizado   |
+| Navegación     | @react-navigation/bottom-tabs v7                   |
+| Estado         | React Context (8 contextos)                        |
+| Almacenamiento | @react-native-async-storage/async-storage          |
+| Iconos         | @expo/vector-icons (Ionicons)                      |
+| Haptics        | expo-haptics                                       |
+| Animaciones    | react-native-reanimated v4                         |
+| Imágenes       | expo-image v3                                      |
+| Compartir      | expo-print + expo-sharing                          |
+| Trabajo        | react-native-worklets                              |
 
 ---
 
@@ -347,9 +348,28 @@ interface AuditoriaSesion {
 | `AlertModal.tsx`      | Modal de alerta/confirmación                    |
 | `BottomTabBar.tsx`    | Navegación inferior móvil                       |
 | `DashboardLayout.tsx` | Layout responsive (sidebar desktop, tabs móvil) |
+| `DashboardShell.tsx`  | Shell del dashboard                             |
 | `PaymentModal.tsx`    | Modal de selección de método de pago            |
 | `ReceiptModal.tsx`    | Modal de comprobante de venta                   |
 | `Sidebar.tsx`         | Sidebar desktop                                 |
+
+#### UI Components (`components/ui/`)
+
+| Archivo               | Descripción                    |
+| --------------------- | ------------------------------ |
+| `HapticButton.tsx`    | Botón con feedback háptico     |
+| `ActivityItem.tsx`    | Item de historial de actividad |
+| `Card.tsx`            | Componente card reutilizable   |
+| `KPICard.tsx`         | Tarjeta KPI del dashboard      |
+| `ProductList.tsx`     | Lista de productos             |
+| `index.ts`            | Barrel export de UI components |
+
+### Hooks (`hooks/`)
+
+| Archivo               | Descripción                              |
+| --------------------- | ---------------------------------------- |
+| `useTranslation.ts`   | Hook para traducciones español/inglés    |
+| `useThemeColors.ts`   | Hook para colores del tema               |
 
 ### Tipos (`types/`)
 
