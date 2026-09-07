@@ -1,4 +1,4 @@
-# FimazaSys - Sistema de Inventario de Zapatillas
+# Fimaza - Sistema de Inventario de Zapatillas
 
 Aplicación multiplataforma para gestión de inventario de zapatillas, diseñada para negocios de calzado. Funciona en **iOS**, **Android** y **Web**.
 

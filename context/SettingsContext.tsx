@@ -16,10 +16,10 @@ interface SettingsContextType {
   updateSettings: (updates: Partial<Settings>) => void;
 }
 
-const SETTINGS_KEY = '@fimazasys_settings';
+const SETTINGS_KEY = '@fimaza_settings';
 
 const DEFAULT_SETTINGS: Settings = {
-  systemName: 'FimazaSys',
+  systemName: 'Fimaza',
   isDarkMode: false,
   businessName: 'FIMAZA',
   businessAddress: 'Av. Principal 123',

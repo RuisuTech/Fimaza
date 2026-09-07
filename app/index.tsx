@@ -22,7 +22,7 @@ export default function LandingScreen() {
               </View>
             </View>
             
-            <Text style={styles.brand}>FimazaSys</Text>
+            <Text style={styles.brand}>Fimaza</Text>
             <Text style={styles.tagline}>Gestion de inventario inteligente</Text>
           </View>
 
