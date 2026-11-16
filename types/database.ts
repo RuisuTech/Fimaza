@@ -39,18 +39,22 @@ export interface Color {
   nombre_color: string;
 }
 
-export interface TipoMovimiento {
-  id: number;
-  nombre_movimiento: string;
-  naturaleza: 'Entrada' | 'Salida';
-}
-
 export interface Cliente {
   id: number;
   tipo_documento: string;
   numero_documento: string;
   nombres_razon_social: string;
   telefono?: string;
+  correo?: string;
+}
+
+export interface Proveedor {
+  id: number;
+  ruc: string;
+  razon_social: string;
+  telefono?: string;
+  direccion?: string;
+  email?: string;
 }
 
 // --- Personal y Seguridad ---
@@ -61,6 +65,7 @@ export interface Empleado {
   nombres: string;
   apellidos: string;
   documento_identidad: string;
+  usuario?: string;
   email?: string;
   password_hash: string;
   estado: boolean;
@@ -108,42 +113,20 @@ export interface Inventario {
   stock_minimo: number;
 }
 
-export interface HistorialMovimiento {
-  id: number;
-  id_inventario: number;
-  id_tipo_movimiento: number;
-  id_empleado: number;
-  cantidad: number;
-  fecha_movimiento: string;
-  observaciones?: string;
-  // Resolved
-  tipo_movimiento?: TipoMovimiento;
-  empleado?: Empleado;
-  variante?: ProductoVariante;
-  producto?: Producto;
-}
-
 // --- Ventas ---
 
-export type MetodoPago = 'efectivo' | 'tarjeta' | 'yape';
-
-export interface VentaCabecera {
+export interface Venta {
   id: number;
   id_cliente?: number;
-  id_empleado_vendedor: number;
-  fecha_venta: string;
+  id_empleado: number;
+  fecha: string;
   subtotal: number;
   igv: number;
-  total_venta: number;
-  metodo_pago: MetodoPago;
-  monto_pagado?: number;
-  vuelto?: number;
-  estado: 'Completada' | 'Anulada';
+  total: number;
+  metodo_pago: string;
+  estado: string;
   comprobante?: string;
-  // Resolved
   detalles?: VentaDetalle[];
-  cliente?: Cliente;
-  empleado?: Empleado;
 }
 
 export interface VentaDetalle {
@@ -152,31 +135,135 @@ export interface VentaDetalle {
   id_variante: number;
   cantidad: number;
   precio_unitario: number;
-  descuento_aplicado: number;
   subtotal: number;
-  // Resolved
-  variante?: ProductoVariante;
 }
 
-// --- Configuración ---
+// --- Movimientos de inventario ---
 
-export interface Settings {
-  company_name: string;
-  address: string;
-  phone: string;
-  currency: string;
-  dark_mode: boolean;
+export interface MovimientoInventario {
+  id: number;
+  id_variante: number;
+  tipo: 'entrada' | 'salida' | 'ajuste';
+  cantidad: number;
+  motivo?: string;
+  referencia?: string;
+  id_empleado?: number;
+  fecha: string;
 }
 
-// --- Carrito (POS) ---
+// --- Guías de almacén ---
 
-export interface CartItem {
-  variante: ProductoVariante;
-  producto: Producto;
+export interface GuiaSalida {
+  id: number;
+  numero: string;
+  fecha: string;
+  motivo: string;
+  referencia?: string;
+  id_empleado: number;
+  estado: string;
+  detalles?: GuiaSalidaDetalle[];
+}
+
+export interface GuiaSalidaDetalle {
+  id: number;
+  id_guia: number;
+  id_variante: number;
+  cantidad: number;
+}
+
+export interface GuiaEntrada {
+  id: number;
+  numero: string;
+  fecha: string;
+  id_orden_compra?: number;
+  id_proveedor: number;
+  observaciones?: string;
+  estado: string;
+  detalles?: GuiaEntradaDetalle[];
+}
+
+export interface GuiaEntradaDetalle {
+  id: number;
+  id_guia: number;
+  id_variante: number;
+  cantidad_esperada: number;
+  cantidad_recibida: number;
+}
+
+// --- Compras ---
+
+export interface PedidoCompra {
+  id: number;
+  numero: string;
+  id_proveedor: number;
+  fecha: string;
+  fecha_requerida?: string;
+  total: number;
+  estado: string;
+  detalles?: PedidoCompraDetalle[];
+}
+
+export interface PedidoCompraDetalle {
+  id: number;
+  id_pedido: number;
+  id_variante: number;
   cantidad: number;
   precio_unitario: number;
-  descuento: number;
   subtotal: number;
+}
+
+export interface CotizacionCompra {
+  id: number;
+  numero: string;
+  id_proveedor: number;
+  fecha: string;
+  valida_hasta?: string;
+  total: number;
+  estado: string;
+  detalles?: CotizacionDetalle[];
+}
+
+export interface CotizacionDetalle {
+  id: number;
+  id_cotizacion: number;
+  id_variante: number;
+  cantidad: number;
+  precio_unitario: number;
+  subtotal: number;
+}
+
+export interface OrdenCompra {
+  id: number;
+  numero: string;
+  id_cotizacion?: number;
+  id_proveedor: number;
+  fecha: string;
+  subtotal: number;
+  igv: number;
+  total: number;
+  estado: string;
+  detalles?: OrdenCompraDetalle[];
+}
+
+export interface OrdenCompraDetalle {
+  id: number;
+  id_orden: number;
+  id_variante: number;
+  cantidad: number;
+  precio_unitario: number;
+  subtotal: number;
+}
+
+export interface FacturaCompra {
+  id: number;
+  serie: string;
+  numero: string;
+  id_orden_compra?: number;
+  id_proveedor: number;
+  fecha_emision: string;
+  fecha_vencimiento?: string;
+  monto: number;
+  estado: string;
 }
 
 // --- Auditoría ---

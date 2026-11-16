@@ -5,11 +5,14 @@ import { ActivityIndicator, View } from 'react-native';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ProductsProvider } from '@/context/ProductsContext';
 import { ActivityProvider } from '@/context/ActivityContext';
-import { SalesProvider } from '@/context/SalesContext';
 import { SettingsProvider } from '@/context/SettingsContext';
 import { CatalogsProvider } from '@/context/CatalogsContext';
 import { UsersProvider } from '@/context/UsersContext';
-import { InventoryProvider } from '@/context/InventoryContext';
+import { ClientsProvider } from '@/context/ClientsContext';
+import { SuppliersProvider } from '@/context/SuppliersContext';
+import { SalesProvider } from '@/context/SalesContext';
+import { WarehouseProvider } from '@/context/WarehouseContext';
+import { PurchasesProvider } from '@/context/PurchasesContext';
 import { Colors } from '@/constants/theme';
 
 function RootLayoutNav() {
@@ -20,12 +23,18 @@ function RootLayoutNav() {
   useEffect(() => {
     if (isLoading) return;
 
-    const inAuthGroup = segments[0] === '(admin)' || segments[0] === '(collaborator)';
+    const inAdminGroup = segments[0] === '(admin)';
+    const inCollaboratorGroup = segments[0] === '(collaborator)';
+    const inAuthGroup = inAdminGroup || inCollaboratorGroup;
     const inLoginRoute = segments[0] === 'login';
 
     if (!user && inAuthGroup) {
       router.dismissAll();
       router.replace('/login');
+    } else if (user && inAdminGroup && user.role !== 'admin') {
+      router.replace('/(collaborator)');
+    } else if (user && inCollaboratorGroup && user.role === 'admin') {
+      router.replace('/(admin)');
     } else if (user && inLoginRoute) {
       const route = user.role === 'admin' ? '/(admin)' : '/(collaborator)';
       router.replace(route);
@@ -44,6 +53,8 @@ function RootLayoutNav() {
     <Stack>
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="login" options={{ headerShown: false }} />
+      <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
+      <Stack.Screen name="reset-password" options={{ headerShown: false }} />
       <Stack.Screen name="(admin)" options={{ headerShown: false }} />
       <Stack.Screen name="(collaborator)" options={{ headerShown: false }} />
     </Stack>
@@ -55,18 +66,24 @@ export default function RootLayout() {
     <AuthProvider>
       <CatalogsProvider>
         <UsersProvider>
-          <SettingsProvider>
-            <ActivityProvider>
-              <ProductsProvider>
-                <InventoryProvider>
-                  <SalesProvider>
-                    <RootLayoutNav />
-                    <StatusBar style="auto" />
-                  </SalesProvider>
-                </InventoryProvider>
-              </ProductsProvider>
-            </ActivityProvider>
-          </SettingsProvider>
+          <ClientsProvider>
+            <SuppliersProvider>
+              <SettingsProvider>
+                <ActivityProvider>
+                  <ProductsProvider>
+                    <SalesProvider>
+                      <WarehouseProvider>
+                        <PurchasesProvider>
+                          <RootLayoutNav />
+                          <StatusBar style="auto" />
+                        </PurchasesProvider>
+                      </WarehouseProvider>
+                    </SalesProvider>
+                  </ProductsProvider>
+                </ActivityProvider>
+              </SettingsProvider>
+            </SuppliersProvider>
+          </ClientsProvider>
         </UsersProvider>
       </CatalogsProvider>
     </AuthProvider>

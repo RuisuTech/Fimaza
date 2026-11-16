@@ -1,6 +1,8 @@
-# Fimaza - Sistema de Inventario de Zapatillas
+# Fimaza Multiplataforma
 
 Aplicación multiplataforma para gestión de inventario de zapatillas, diseñada para negocios de calzado. Funciona en **iOS**, **Android** y **Web**.
+
+> **Estado actual:** demo funcional con Supabase Auth, RLS, ventas, almacén y compras. Incluye 34 rutas, 10 vistas operativas y creación de usuarios vía Edge Function. Pendiente para producción: despliegue, dominio, SMTP, backups y pruebas E2E.
 
 ---
 
@@ -41,10 +43,12 @@ Esto abrirá el Expo DevTools en el navegador. Desde ahí puedes:
 
 ### Credenciales por defecto
 
-| Rol           | Email                  | Contraseña |
-| ------------- | ---------------------- | ---------- |
-| Administrador | `admin@inventario.com` | `admin123` |
-| Colaborador   | `user@inventario.com`  | `user123`  |
+| Rol           | Usuario       | Email                | Contraseña |
+| ------------- | ------------- | -------------------- | ---------- |
+| Administrador | `admin`       | `admin@fimaza.com`   | `admin123` |
+| Colaborador   | `vendedora01` | `user@fimaza.com`    | `user123`  |
+
+También se puede iniciar sesión con el DNI demo: `12345678` o `87654321`.
 
 ### Scripts Disponibles
 
@@ -55,7 +59,25 @@ Esto abrirá el Expo DevTools en el navegador. Desde ahí puedes:
 | `npm run ios`           | Abre en simulador iOS                 |
 | `npm run web`           | Abre la versión web                   |
 | `npm run lint`          | Ejecuta ESLint                        |
+| `npm run typecheck`     | Ejecuta TypeScript sin emitir         |
+| `npm run export:web`    | Genera el build web estático          |
 | `npm run reset-project` | Resetea el proyecto a estado inicial  |
+
+### Verificación y despliegue
+
+```bash
+npm run typecheck
+npm run lint
+npm run export:web
+```
+
+Build móvil con EAS:
+
+```bash
+npx eas-cli build --profile production
+```
+
+Antes de desplegar, configura `EXPO_PUBLIC_SUPABASE_URL` y `EXPO_PUBLIC_SUPABASE_ANON_KEY` en el entorno de build. Las Edge Functions usan `SUPABASE_SERVICE_ROLE_KEY`, que Supabase inyecta automáticamente.
 
 ---
 
@@ -66,10 +88,10 @@ Esto abrirá el Expo DevTools en el navegador. Desde ahí puedes:
 | Framework      | Expo SDK 54 (React Native 0.81.5)                 |
 | Router         | expo-router v6                                     |
 | Lenguaje       | TypeScript 5.9.2                                   |
-| Estilos        | NativeWind v4 + TailwindCSS + tema personalizado   |
-| Navegación     | @react-navigation/bottom-tabs v7                   |
-| Estado         | React Context (8 contextos)                        |
-| Almacenamiento | @react-native-async-storage/async-storage          |
+| Estilos        | React Native StyleSheet + tema personalizado       |
+| Navegación     | expo-router v6                                     |
+| Estado         | React Context + Supabase                           |
+| Almacenamiento | Supabase PostgreSQL + AsyncStorage local (demo)    |
 | Iconos         | @expo/vector-icons (Ionicons)                      |
 | Haptics        | expo-haptics                                       |
 | Animaciones    | react-native-reanimated v4                         |
@@ -79,11 +101,17 @@ Esto abrirá el Expo DevTools en el navegador. Desde ahí puedes:
 
 ---
 
-## Base de Datos (DB_FIMAZA)
+## Base de Datos
 
-Motor: **Microsoft SQL Server (T-SQL)**. El script completo se encuentra en [`database/SQLQuery1-BD -FIMAZA -Releasse1.sql`](database/SQLQuery1-BD%20-FIMAZA%20-Releasse1.sql).
+Motor: **Supabase PostgreSQL**.
 
-> **Nota:** La aplicación actualmente usa AsyncStorage como almacenamiento local con datos semilla en memoria. La estructura de datos en código es 1:1 con la BD SQL Server, permitiendo migración futura a backend.
+- Migraciones: `supabase/migrations/`
+- Edge Functions: `supabase/functions/admin-create-employee` y `admin-update-employee`
+- Variables locales: `.env.local` (no se versiona); plantilla en `.env.example`
+- Seguridad: Supabase Auth, RLS activo y RPCs transaccionales para ventas/almacén/compras.
+- Migración pendiente: registrar el historial con Supabase CLI y configurar backups.
+
+> **Nota:** el script [`database/SQLQuery1-BD -FIMAZA -Releasse1.sql`](database/SQLQuery1-BD%20-FIMAZA%20-Releasse1.sql) queda como referencia del esquema SQL Server original.
 
 ### Diagrama de Relaciones
 

@@ -19,7 +19,7 @@ interface SettingsContextType {
 const SETTINGS_KEY = '@fimaza_settings';
 
 const DEFAULT_SETTINGS: Settings = {
-  systemName: 'Fimaza',
+  systemName: 'Fimaza Multiplataforma',
   isDarkMode: false,
   businessName: 'FIMAZA',
   businessAddress: 'Av. Principal 123',

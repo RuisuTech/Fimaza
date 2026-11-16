@@ -9,10 +9,4 @@ export interface User {
   employeeId?: number;
 }
 
-export interface AuthState {
-  user: User | null;
-  isLoading: boolean;
-  isAuthenticated: boolean;
-}
-
 export * from './database';

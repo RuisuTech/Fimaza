@@ -1,0 +1,42 @@
+name: Supabase Backup to Google Drive
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+      GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+      GDRIVE_TOKEN_JSON: ${{ secrets.GDRIVE_TOKEN_JSON }}
+      GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+    steps:
+      - name: Create database dump
+        run: |
+          docker run --rm \
+            -v "$PWD:/backup" \
+            postgres:17 \
+            pg_dump "$SUPABASE_DB_URL" \
+            --format=custom \
+            --no-owner \
+            --no-privileges \
+            --file=/backup/backup.dump
+          ls -lh backup.dump
+
+      - name: Install rclone
+        run: curl https://rclone.org/install.sh | sudo bash
+
+      - name: Upload to Google Drive
+        run: |
+          rclone config create gdrive drive \
+            client_id "$GDRIVE_CLIENT_ID" \
+            client_secret "$GDRIVE_CLIENT_SECRET" \
+            token "$GDRIVE_TOKEN_JSON" \
+            root_folder_id "$GDRIVE_FOLDER_ID" \
+            scope drive
+          rclone copy backup.dump gdrive:
+          rclone delete gdrive: --min-age 30d

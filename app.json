@@ -1,17 +1,19 @@
 {
   "expo": {
-    "name": "NextInventory",
-    "slug": "NextInventory",
+    "name": "Fimaza Multiplataforma",
+    "slug": "fimaza-multiplataforma",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "nextinventory",
+    "scheme": "fimaza",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.fimaza.multiplataforma"
     },
     "android": {
+      "package": "com.fimaza.multiplataforma",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

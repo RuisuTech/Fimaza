@@ -1,199 +1,444 @@
-import React, { useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useProducts } from '@/context/ProductsContext';
-import { useSales } from '@/context/SalesContext';
-import { useInventory } from '@/context/InventoryContext';
-import { useAuth } from '@/context/AuthContext';
-import DashboardLayout from '@/components/DashboardLayout';
-import { adminNavItems } from '@/constants/navigation';
+import React from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  useWindowDimensions,
+  Platform,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import AdminTopNav from '@/components/AdminTopNav';
 import { Spacing, BorderRadius, FontSize, FontWeight, Shadows } from '@/constants/theme';
-import { useThemeColors } from '@/hooks/useThemeColors';
-import { useTranslation } from '@/hooks/useTranslation';
 
-export default function AdminDashboard() {
-  const { products, variants, inventory } = useProducts();
-  const { sales, getTodaySales } = useSales();
-  const { movements } = useInventory();
-  const { user } = useAuth();
-  const C = useThemeColors();
-  const { t } = useTranslation();
-  const { width } = useWindowDimensions();
-  const isDesktop = width >= 768;
+const PALETTE = {
+  page: '#f4f5f7',
+  card: '#ffffff',
+  cardBorder: '#D5DCE6',
+  cardHeader: '#f8fafc',
+  cardHeaderText: '#64748b',
+  cardNumber: '#94a3b8',
+  heading: '#0B2545',
+  textMuted: '#6b7280',
+  active: '#255bb3',
+  white: '#ffffff',
+};
 
-  const stats = useMemo(() => {
-    const todaySales = getTodaySales();
-    const todayRevenue = todaySales.reduce((sum, s) => sum + s.total_venta, 0);
-    const todayProfit = todaySales.reduce((sum, sale) => {
-      return sum + (sale.detalles || []).reduce((dSum, d) => {
-        const v = variants.find(va => va.id === d.id_variante);
-        const pc = v?.precio_compra || 0;
-        return dSum + ((d.precio_unitario - pc) * d.cantidad);
-      }, 0);
-    }, 0);
-    const totalProfit = sales.reduce((sum, sale) => {
-      return sum + (sale.detalles || []).reduce((dSum, d) => {
-        const v = variants.find(va => va.id === d.id_variante);
-        const pc = v?.precio_compra || 0;
-        return dSum + ((d.precio_unitario - pc) * d.cantidad);
-      }, 0);
-    }, 0);
-    const totalStock = inventory.reduce((sum, inv) => sum + inv.stock_actual, 0);
-    const lowStock = inventory.filter(inv => inv.stock_actual <= inv.stock_minimo);
-    const recentSales = [...sales].sort((a, b) => new Date(b.fecha_venta).getTime() - new Date(a.fecha_venta).getTime()).slice(0, 5);
-    const recentMovements = [...movements].sort((a, b) => new Date(b.fecha_movimiento).getTime() - new Date(a.fecha_movimiento).getTime()).slice(0, 5);
+const CARD_SHADOW = Platform.OS === 'web'
+  ? { boxShadow: '0 2px 8px rgba(15, 43, 78, 0.06)' }
+  : Shadows.sm;
 
-    return { todaySales: todaySales.length, todayRevenue, todayProfit, totalProfit, totalStock, lowStockCount: lowStock.length, recentSales, recentMovements };
-  }, [inventory, sales, movements, variants, getTodaySales]);
+interface ModuleDef {
+  id: string;
+  section: string;
+  title: string;
+  description: string;
+  route: string;
+}
 
-  const getProductName = (variantId: number) => {
-    const variant = variants.find(v => v.id === variantId);
-    const product = variant ? products.find(p => p.id === variant.id_producto) : null;
-    return product?.nombre || 'Producto';
-  };
+const MODULES: ModuleDef[] = [
+  {
+    id: '01',
+    section: 'GESTIÓN DEL SISTEMA',
+    title: 'Usuarios',
+    description: 'Quién entra al sistema y con qué rol.',
+    route: '/(admin)/usuarios',
+  },
+  {
+    id: '02',
+    section: 'GESTIONAR VENTAS',
+    title: 'Clientes',
+    description: 'Datos de tus compradores para la boleta.',
+    route: '/(admin)/clientes',
+  },
+  {
+    id: '03',
+    section: 'GESTIONAR VENTAS',
+    title: 'Productos',
+    description: 'Modelos, tallas, precios y stock mínimo.',
+    route: '/(admin)/productos',
+  },
+  {
+    id: '04',
+    section: 'GESTIONAR COMPRAS',
+    title: 'Proveedores',
+    description: 'Directorio de proveedores de calzado.',
+    route: '/(admin)/proveedores',
+  },
+];
 
-  const formatDate = (iso: string) => {
-    const d = new Date(iso);
-    return `${d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })} ${d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
-  };
+interface ModuleCardProps {
+  module: ModuleDef;
+  isMobile: boolean;
+  isTablet?: boolean;
+  onOpen: (module: ModuleDef) => void;
+}
 
-  const kpis = [
-    { title: t('dashboard.salesToday'), value: stats.todaySales.toString(), icon: 'cart-outline', color: C.accent, bg: C.accentLight },
-    { title: 'Ganancia hoy', value: `S/ ${stats.todayProfit.toFixed(0)}`, icon: 'trending-up-outline', color: C.success, bg: C.successLight },
-    { title: 'Ganancia total', value: `S/ ${stats.totalProfit.toFixed(0)}`, icon: 'wallet-outline', color: C.warning, bg: C.warningLight },
-    { title: t('inventory.lowStock'), value: stats.lowStockCount.toString(), icon: 'alert-circle-outline', color: C.danger, bg: C.dangerLight },
-  ];
-
+function ModuleCard({ module, isMobile, isTablet, onOpen }: ModuleCardProps) {
   return (
-    <DashboardLayout items={adminNavItems}>
-      <View style={[styles.container, { backgroundColor: C.background }]}>
-        <View style={styles.greetingRow}>
-          <Text style={[styles.greeting, { color: C.text }]}>{t('dashboard.greeting')}, {user?.name?.split(' ')[0] || 'Admin'}</Text>
-          <Text style={[styles.subtitle, { color: C.textSecondary }]}>{t('dashboard.summary')}</Text>
+    <View
+      style={[
+        styles.card,
+        isMobile ? styles.cardMobile : isTablet ? styles.cardTablet : styles.cardFlex,
+      ]}
+    >
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardSection}>{module.section}</Text>
+        <Text style={styles.cardNumber}>{module.id}</Text>
+      </View>
+      <View style={styles.cardBody}>
+        <View>
+          <Text style={styles.cardTitle}>{module.title}</Text>
+          <Text style={styles.cardDescription}>{module.description}</Text>
         </View>
+        <TouchableOpacity
+          style={styles.cardButton}
+          onPress={() => onOpen(module)}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel={`Abrir ${module.title}`}
+        >
+          <Text style={styles.cardButtonText}>Abrir →</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
 
-        <View style={[styles.kpiGrid, isDesktop && styles.kpiGridDesktop]}>
-          {kpis.map((kpi, index) => (
-            <View key={index} style={[styles.kpiCard, isDesktop && styles.kpiCardDesktop, { backgroundColor: C.surface, borderColor: C.border }]}>
-              <View style={[styles.kpiIcon, { backgroundColor: kpi.bg }]}>
-                <Ionicons name={kpi.icon as any} size={20} color={kpi.color} />
-              </View>
-              <Text style={[styles.kpiValue, { color: C.text }]}>{kpi.value}</Text>
-              <Text style={[styles.kpiTitle, { color: C.textMuted }]}>{kpi.title}</Text>
-            </View>
-          ))}
+function TicketCard() {
+  return (
+    <View style={styles.ticket}>
+      <Text style={styles.ticketBrand}>FIMAZA</Text>
+      <Text style={styles.ticketType}>BOLETA ELECTRÓNICA</Text>
+      <Text style={styles.ticketNumber}>B001-00000000</Text>
+
+      <View style={styles.ticketDashed} />
+
+      <View style={styles.ticketItems}>
+        <View style={styles.ticketRow}>
+          <Text style={styles.ticketItem}>ZAPATILLA A · T40</Text>
+          <Text style={styles.ticketPrice}>S/ 000.00</Text>
         </View>
-
-        <View style={styles.row}>
-          <View style={styles.halfSection}>
-            <Text style={[styles.sectionTitle, { color: C.text }]}>{t('sales.title')} recientes</Text>
-            {stats.recentSales.length === 0 ? (
-              <Text style={[styles.emptyText, { color: C.textMuted }]}>{t('sales.empty')}</Text>
-            ) : (
-              <View style={[styles.scrollContainer, { borderColor: C.border, backgroundColor: C.surface }]}>
-              <ScrollView
-                nestedScrollEnabled
-                showsVerticalScrollIndicator={true}
-                indicatorStyle={C.textMuted}
-              >
-                {stats.recentSales.map(sale => {
-                    const saleProfit = (sale.detalles || []).reduce((sum, d) => {
-                      const v = variants.find(va => va.id === d.id_variante);
-                      const pc = v?.precio_compra || 0;
-                      return sum + ((d.precio_unitario - pc) * d.cantidad);
-                    }, 0);
-                    return (
-                    <View key={sale.id} style={[styles.listItem, { backgroundColor: C.surface, borderColor: C.border }]}>
-                      <View style={[styles.listIcon, { backgroundColor: C.successLight }]}>
-                        <Ionicons name="cart" size={16} color={C.success} />
-                      </View>
-                      <View style={styles.listInfo}>
-                        <Text style={[styles.listTitle, { color: C.text }]}>{formatDate(sale.fecha_venta)}</Text>
-                        <Text style={[styles.listMeta, { color: C.textMuted }]}>{sale.detalles?.length || 0} productos</Text>
-                      </View>
-                      <View style={{ alignItems: 'flex-end' }}>
-                        <Text style={[styles.listValue, { color: C.success }]}>S/ {sale.total_venta.toFixed(2)}</Text>
-                        <Text style={[styles.listMeta, { color: saleProfit >= 0 ? C.success : C.danger }]}>+S/ {saleProfit.toFixed(2)}</Text>
-                      </View>
-                    </View>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.halfSection}>
-            <Text style={[styles.sectionTitle, { color: C.text }]}>{t('inventory.history')}</Text>
-            {stats.recentMovements.length === 0 ? (
-              <Text style={[styles.emptyText, { color: C.textMuted }]}>Sin movimientos</Text>
-            ) : (
-              <View style={[styles.scrollContainer, { borderColor: C.border, backgroundColor: C.surface }]}>
-              <ScrollView
-                nestedScrollEnabled
-                showsVerticalScrollIndicator={true}
-                indicatorStyle={C.textMuted}
-              >
-                {stats.recentMovements.map(mov => {
-                    const isEntrada = mov.id_tipo_movimiento < 3;
-                    return (
-                      <View key={mov.id} style={[styles.listItem, { backgroundColor: C.surface, borderColor: C.border }]}>
-                        <View style={[styles.listIcon, { backgroundColor: isEntrada ? C.successLight : C.dangerLight }]}>
-                          <Ionicons name={isEntrada ? 'arrow-down' : 'arrow-up'} size={16} color={isEntrada ? C.success : C.danger} />
-                        </View>
-                        <View style={styles.listInfo}>
-                          <Text style={[styles.listTitle, { color: C.text }]}>{getProductName(variants.find(v => {
-                            const inv = inventory.find(i => i.id === mov.id_inventario);
-                            return inv && v.id === inv.id_variante;
-                          })?.id || 0)}</Text>
-                          <Text style={[styles.listMeta, { color: C.textMuted }]}>{formatDate(mov.fecha_movimiento)}</Text>
-                        </View>
-                        <Text style={[styles.listValue, { color: isEntrada ? C.success : C.danger }]}>
-                          {isEntrada ? '+' : '-'}{mov.cantidad}
-                        </Text>
-                      </View>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            )}
-          </View>
+        <View style={styles.ticketRow}>
+          <Text style={styles.ticketItem}>ZAPATILLA B · T38</Text>
+          <Text style={styles.ticketPrice}>S/ 000.00</Text>
         </View>
       </View>
-    </DashboardLayout>
+
+      <View style={styles.ticketSolid} />
+
+      <View style={styles.ticketRow}>
+        <Text style={styles.ticketTotal}>TOTAL</Text>
+        <Text style={styles.ticketTotal}>S/ 000.00</Text>
+      </View>
+
+      <Text style={styles.ticketFooter}>GRACIAS POR SU COMPRA</Text>
+    </View>
+  );
+}
+
+export default function AdminDashboard() {
+  const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 1024;
+  const isMobile = width < 700;
+
+  const handleOpen = (route: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push(route as any);
+  };
+
+  return (
+    <View style={styles.page}>
+      <AdminTopNav active="Inicio" />
+
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.scrollContent, isMobile && styles.scrollContentMobile]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.content}>
+          <Text style={[styles.title, isMobile && styles.titleMobile]}>Panel principal</Text>
+          <Text style={styles.subtitle}>
+            Elige un módulo para empezar. Verás solo lo que tu rol permite.
+          </Text>
+
+          <View style={[styles.mainLayout, isDesktop && styles.mainLayoutDesktop]}>
+            <View style={[styles.modulesColumn, isDesktop && styles.modulesColumnDesktop]}>
+              {isDesktop ? (
+                <>
+                  <View style={styles.cardsRow}>
+                    {MODULES.slice(0, 3).map(module => (
+                      <ModuleCard
+                        key={module.id}
+                        module={module}
+                        isMobile={false}
+                        onOpen={item => handleOpen(item.route)}
+                      />
+                    ))}
+                  </View>
+                  <ModuleCard
+                    module={MODULES[3]}
+                    isMobile
+                    onOpen={item => handleOpen(item.route)}
+                  />
+                </>
+              ) : (
+                <View
+                  style={[
+                    styles.cardsRow,
+                    isMobile ? styles.cardsRowMobile : styles.cardsRowTablet,
+                  ]}
+                >
+                  {MODULES.map(module => (
+                    <ModuleCard
+                      key={module.id}
+                      module={module}
+                      isMobile={isMobile}
+                      isTablet={!isMobile}
+                      onOpen={item => handleOpen(item.route)}
+                    />
+                  ))}
+                </View>
+              )}
+            </View>
+
+            <View
+              style={[
+                styles.ticketColumn,
+                isDesktop ? styles.ticketColumnDesktop : styles.ticketColumnBelow,
+              ]}
+            >
+              <TicketCard />
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: Spacing.xl, paddingBottom: 100 },
-  greetingRow: { marginBottom: Spacing.xl },
-  greeting: { fontSize: FontSize.xxl, fontWeight: FontWeight.bold, marginBottom: 4 },
-  subtitle: { fontSize: FontSize.lg },
-  kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.lg, marginBottom: Spacing.xl },
-  kpiGridDesktop: { flexWrap: 'nowrap' },
-  kpiCard: {
-    width: '47.5%', borderRadius: BorderRadius.lg, padding: Spacing.xl,
-    borderWidth: 1, ...Shadows.sm,
+  page: {
+    flex: 1,
+    backgroundColor: PALETTE.page,
   },
-  kpiCardDesktop: {
-    width: 'auto', flex: 1,
+  scroll: {
+    flex: 1,
   },
-  kpiIcon: { width: 48, height: 48, borderRadius: BorderRadius.md, justifyContent: 'center', alignItems: 'center', marginBottom: Spacing.lg },
-  kpiValue: { fontSize: FontSize.xxl, fontWeight: FontWeight.bold },
-  kpiTitle: { fontSize: FontSize.sm, marginTop: 4 },
-  section: { marginBottom: Spacing.xl },
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.lg, marginBottom: Spacing.xl },
-  halfSection: { flex: 1, minWidth: 280 },
-  scrollContainer: { borderRadius: BorderRadius.lg, borderWidth: 1, padding: Spacing.sm, height: 320 },
-  sectionTitle: { fontSize: FontSize.xl, fontWeight: FontWeight.bold, marginBottom: Spacing.lg },
-  listItem: {
-    flexDirection: 'row', alignItems: 'center', padding: Spacing.lg,
-    borderRadius: BorderRadius.md, marginBottom: Spacing.sm, borderWidth: 1,
+  scrollContent: {
+    paddingHorizontal: 32,
+    paddingVertical: 36,
+    alignItems: 'center',
   },
-  listIcon: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: Spacing.lg },
-  listInfo: { flex: 1 },
-  listTitle: { fontSize: FontSize.md, fontWeight: FontWeight.semibold },
-  listMeta: { fontSize: FontSize.sm },
-  listValue: { fontSize: FontSize.lg, fontWeight: FontWeight.bold },
-  emptyText: { fontSize: FontSize.md, textAlign: 'center', paddingVertical: Spacing.xl },
+  scrollContentMobile: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.xxl,
+  },
+  content: {
+    width: '100%',
+    maxWidth: 1200,
+  },
+  title: {
+    color: PALETTE.heading,
+    fontSize: 36,
+    lineHeight: 44,
+    fontWeight: FontWeight.extrabold,
+    letterSpacing: -0.5,
+  },
+  titleMobile: {
+    fontSize: 28,
+    lineHeight: 34,
+  },
+  subtitle: {
+    color: PALETTE.textMuted,
+    fontSize: FontSize.md,
+    lineHeight: 22,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.xxl,
+  },
+  mainLayout: {
+    flexDirection: 'column',
+    gap: Spacing.xl,
+  },
+  mainLayoutDesktop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  modulesColumn: {
+    gap: Spacing.lg,
+    width: '100%',
+  },
+  modulesColumnDesktop: {
+    flex: 1,
+    width: 'auto',
+  },
+  cardsRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: Spacing.lg,
+  },
+  cardsRowMobile: {
+    flexDirection: 'column',
+  },
+  cardsRowTablet: {
+    flexWrap: 'wrap',
+  },
+  card: {
+    backgroundColor: PALETTE.card,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: PALETTE.cardBorder,
+    ...CARD_SHADOW,
+  },
+  cardFlex: {
+    flex: 1,
+  },
+  cardMobile: {
+    width: '100%',
+  },
+  cardTablet: {
+    width: '48%',
+    flexGrow: 0,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: PALETTE.cardHeader,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderTopLeftRadius: BorderRadius.md - 1,
+    borderTopRightRadius: BorderRadius.md - 1,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eef2f7',
+    gap: Spacing.sm,
+  },
+  cardSection: {
+    color: PALETTE.cardHeaderText,
+    fontSize: 10,
+    fontWeight: FontWeight.bold,
+    letterSpacing: 0.8,
+    flexShrink: 1,
+  },
+  cardNumber: {
+    color: PALETTE.cardNumber,
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.bold,
+  },
+  cardBody: {
+    flex: 1,
+    justifyContent: 'space-between',
+    padding: Spacing.lg,
+    gap: Spacing.lg,
+  },
+  cardTitle: {
+    color: PALETTE.heading,
+    fontSize: FontSize.xxl,
+    fontWeight: FontWeight.bold,
+    marginBottom: 6,
+  },
+  cardDescription: {
+    color: PALETTE.textMuted,
+    fontSize: FontSize.sm,
+    lineHeight: 20,
+  },
+  cardButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: PALETTE.active,
+    borderRadius: BorderRadius.sm,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  cardButtonText: {
+    color: PALETTE.white,
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+  },
+  ticketColumn: {
+    width: '100%',
+  },
+  ticketColumnDesktop: {
+    width: 320,
+    flexGrow: 0,
+    flexShrink: 0,
+  },
+  ticketColumnBelow: {
+    maxWidth: 420,
+    alignSelf: 'center',
+  },
+  ticket: {
+    backgroundColor: PALETTE.card,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: PALETTE.cardBorder,
+    padding: Spacing.xxl,
+    ...CARD_SHADOW,
+  },
+  ticketBrand: {
+    color: PALETTE.heading,
+    fontSize: FontSize.xxl,
+    fontWeight: FontWeight.extrabold,
+    letterSpacing: 1,
+    textAlign: 'center',
+  },
+  ticketType: {
+    color: PALETTE.cardHeaderText,
+    fontSize: 10,
+    fontWeight: FontWeight.semibold,
+    letterSpacing: 1.2,
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  ticketNumber: {
+    color: PALETTE.cardNumber,
+    fontSize: FontSize.xs,
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  ticketDashed: {
+    borderTopWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#cbd5e1',
+    marginVertical: Spacing.lg,
+  },
+  ticketItems: {
+    gap: 10,
+  },
+  ticketRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.md,
+  },
+  ticketItem: {
+    color: '#334155',
+    fontSize: FontSize.sm,
+    letterSpacing: 0.4,
+    flexShrink: 1,
+  },
+  ticketPrice: {
+    color: '#334155',
+    fontSize: FontSize.sm,
+  },
+  ticketSolid: {
+    borderTopWidth: 1,
+    borderColor: '#e2e8f0',
+    marginVertical: Spacing.lg,
+  },
+  ticketTotal: {
+    color: PALETTE.heading,
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.bold,
+  },
+  ticketFooter: {
+    color: PALETTE.cardHeaderText,
+    fontSize: 10,
+    fontWeight: FontWeight.bold,
+    letterSpacing: 1,
+    textAlign: 'center',
+    marginTop: Spacing.xl,
+  },
 });

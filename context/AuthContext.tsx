@@ -1,122 +1,149 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User, Role } from '@/types';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
+} from 'react';
+import { AppState } from 'react-native';
+import { supabase } from '@/lib/supabase';
+import { User, Empleado } from '@/types';
 
 interface AuthContextType {
   user: User | null;
-  users: User[];
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: User }>;
+  login: (
+    identifier: string,
+    password: string,
+  ) => Promise<{ success: boolean; error?: string; user?: User }>;
   logout: () => void;
-  createUser: (data: { name: string; email: string; password: string }) => Promise<{ success: boolean; error?: string }>;
-  updateUser: (id: string, updates: Partial<User>) => void;
-  deleteUser: (id: string) => void;
   isAdmin: boolean;
 }
 
-const INITIAL_USERS: User[] = [
-  { id: '1', email: 'admin@inventario.com', password: 'admin123', name: 'Usuario Admin', role: 'admin', employeeId: 1 },
-  { id: '2', email: 'user@inventario.com', password: 'user123', name: 'Usuario Vendedor', role: 'colaborador', employeeId: 2 },
-];
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const STORAGE_KEY = '@auth_user';
-const USERS_KEY = '@users';
+const buildSessionUser = (employee: Empleado): User => ({
+  id: String(employee.id),
+  email: employee.email ?? `${employee.usuario ?? employee.documento_identidad}@fimaza.local`,
+  password: '',
+  name: `${employee.nombres} ${employee.apellidos}`.trim(),
+  role: employee.id_cargo === 1 ? 'admin' : 'colaborador',
+  employeeId: employee.id,
+});
+
+async function getMyProfile(): Promise<Empleado | null> {
+  const { data, error } = await supabase.rpc('get_my_profile');
+  if (error) return null;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return null;
+
+  return {
+    id: Number(row.id),
+    id_cargo: Number(row.id_cargo),
+    nombres: row.nombres,
+    apellidos: row.apellidos,
+    documento_identidad: row.documento_identidad,
+    usuario: row.usuario ?? undefined,
+    email: row.email ?? undefined,
+    password_hash: '',
+    estado: Boolean(row.estado),
+  };
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
   const [isLoading, setIsLoading] = useState(true);
+
+  const loadUser = useCallback(async () => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        setUser(null);
+        return;
+      }
+      const profile = await getMyProfile();
+      if (!profile) {
+        await supabase.auth.signOut();
+        setUser(null);
+        return;
+      }
+      setUser(buildSessionUser(profile));
+    } catch {
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     loadUser();
-    loadUsers();
-  }, []);
 
-  const loadUser = async () => {
-    try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const storedUser = JSON.parse(stored);
-        const freshUser = INITIAL_USERS.find(u => u.email === storedUser.email);
-        if (freshUser) {
-          setUser({ ...storedUser, name: freshUser.name });
-          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ ...storedUser, name: freshUser.name }));
-        } else {
-          setUser(storedUser);
-        }
-      }
-    } catch {} finally {
-      setIsLoading(false);
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) setUser(null);
+    });
+    const appStateSubscription = AppState.addEventListener('change', state => {
+      if (state === 'active') loadUser();
+    });
+
+    return () => {
+      data.subscription.unsubscribe();
+      appStateSubscription.remove();
+    };
+  }, [loadUser]);
+
+  const login = async (
+    identifier: string,
+    password: string,
+  ): Promise<{ success: boolean; error?: string; user?: User }> => {
+    const { data: email, error: resolveError } = await supabase.rpc('resolve_login_email', {
+      p_identifier: identifier.trim(),
+    });
+
+    if (resolveError || !email) {
+      return { success: false, error: 'Usuario o contraseña incorrectos.' };
     }
-  };
 
-  const loadUsers = async () => {
-    try {
-      const stored = await AsyncStorage.getItem(USERS_KEY);
-      if (stored) {
-        const storedUsers = JSON.parse(stored) as User[];
-        const merged = [...INITIAL_USERS];
-        for (const su of storedUsers) {
-          if (!merged.some(u => u.email === su.email)) {
-            merged.push(su);
-          }
-        }
-        setUsers(merged);
-      }
-    } catch {}
-  };
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string; user?: User }> => {
-    const found = users.find(u => u.email === email && u.password === password);
-    if (!found) return { success: false, error: 'Credenciales incorrectas' };
-    setUser(found);
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(found));
-    return { success: true, user: found };
+    if (signInError) {
+      return { success: false, error: 'Usuario o contraseña incorrectos.' };
+    }
+
+    const profile = await getMyProfile();
+    if (!profile) {
+      await supabase.auth.signOut();
+      return { success: false, error: 'Tu usuario no tiene un perfil activo.' };
+    }
+
+    if (!profile.estado) {
+      await supabase.auth.signOut();
+      return { success: false, error: 'Este usuario está inactivo. Contacta al Administrador.' };
+    }
+
+    const sessionUser = buildSessionUser(profile);
+    setUser(sessionUser);
+    return { success: true, user: sessionUser };
   };
 
   const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    await AsyncStorage.removeItem(STORAGE_KEY);
-  };
-
-  const updateUser = async (id: string, updates: Partial<User>) => {
-    const updated = users.map(u => (u.id === id ? { ...u, ...updates } : u));
-    setUsers(updated);
-    await AsyncStorage.setItem(USERS_KEY, JSON.stringify(updated));
-    if (user?.id === id) {
-      const updatedUser = { ...user, ...updates };
-      setUser(updatedUser);
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedUser));
-    }
-  };
-
-  const createUser = async (data: { name: string; email: string; password: string }): Promise<{ success: boolean; error?: string }> => {
-    if (users.some(u => u.email === data.email)) {
-      return { success: false, error: 'El email ya esta registrado' };
-    }
-    const newUser: User = {
-      id: Date.now().toString(),
-      name: data.name.trim(),
-      email: data.email.trim().toLowerCase(),
-      password: data.password,
-      role: 'colaborador',
-    };
-    const updated = [...users, newUser];
-    setUsers(updated);
-    await AsyncStorage.setItem(USERS_KEY, JSON.stringify(updated));
-    return { success: true };
-  };
-
-  const deleteUser = async (id: string) => {
-    const updated = users.filter(u => u.id !== id);
-    setUsers(updated);
-    await AsyncStorage.setItem(USERS_KEY, JSON.stringify(updated));
   };
 
   return (
-    <AuthContext.Provider value={{ user, users, isLoading, login, logout, createUser, updateUser, deleteUser, isAdmin: user?.role === 'admin' }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isLoading,
+        login,
+        logout,
+        isAdmin: user?.role === 'admin',
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
