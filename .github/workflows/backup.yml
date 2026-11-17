@@ -1,19 +1,21 @@
-name: Supabase Backup to Google Drive
+name: Supabase Backup to GitHub Releases
 
 on:
   schedule:
     - cron: '0 3 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   backup:
     runs-on: ubuntu-latest
     env:
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-      GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
-      GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
-      GDRIVE_TOKEN_JSON: ${{ secrets.GDRIVE_TOKEN_JSON }}
-      GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
     steps:
       - name: Create database dump
         run: |
@@ -27,16 +29,22 @@ jobs:
             --file=/backup/backup.dump
           ls -lh backup.dump
 
-      - name: Install rclone
-        run: curl https://rclone.org/install.sh | sudo bash
-
-      - name: Upload to Google Drive
+      - name: Encrypt backup
         run: |
-          rclone config create gdrive drive \
-            client_id "$GDRIVE_CLIENT_ID" \
-            client_secret "$GDRIVE_CLIENT_SECRET" \
-            token "$GDRIVE_TOKEN_JSON" \
-            root_folder_id "$GDRIVE_FOLDER_ID" \
-            scope drive
-          rclone copy backup.dump gdrive:
-          rclone delete gdrive: --min-age 30d
+          echo "$BACKUP_PASSPHRASE" | gpg \
+            --batch \
+            --yes \
+            --passphrase-fd 0 \
+            --symmetric \
+            --cipher-algo AES256 \
+            --output backup.dump.gpg \
+            backup.dump
+          rm backup.dump
+          ls -lh backup.dump.gpg
+
+      - name: Publish encrypted release
+        run: |
+          TAG="backup-$(date -u +%Y%m%d-%H%M)"
+          gh release create "$TAG" backup.dump.gpg \
+            --title "Backup $TAG" \
+            --notes "Backup cifrado de Supabase. Restaurar con gpg + pg_restore."
