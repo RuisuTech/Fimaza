@@ -48,3 +48,13 @@ jobs:
           gh release create "$TAG" backup.dump.gpg \
             --title "Backup $TAG" \
             --notes "Backup cifrado de Supabase. Restaurar con gpg + pg_restore."
+
+      - name: Delete backups older than 30 days
+        run: |
+          gh release list --limit 100 --json tagName,createdAt \
+            --jq '.[] | select((now - (.createdAt | fromdateiso8601)) > 2592000) | .tagName' |
+          while read -r tag; do
+            if [ -n "$tag" ]; then
+              gh release delete "$tag" --yes --cleanup-tag
+            fi
+          done
