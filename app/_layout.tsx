@@ -22,6 +22,12 @@ function RootLayoutNav() {
   const router = useRouter();
 
   useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.title = 'Fimaza Multiplataforma';
+    }
+  }, []);
+
+  useEffect(() => {
     if (isLoading) return;
 
     const inAdminGroup = segments[0] === '(admin)';
