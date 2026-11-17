@@ -13,6 +13,7 @@ import { SuppliersProvider } from '@/context/SuppliersContext';
 import { SalesProvider } from '@/context/SalesContext';
 import { WarehouseProvider } from '@/context/WarehouseContext';
 import { PurchasesProvider } from '@/context/PurchasesContext';
+import AppErrorBoundary from '@/components/AppErrorBoundary';
 import { Colors } from '@/constants/theme';
 
 function RootLayoutNav() {
@@ -63,29 +64,31 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <CatalogsProvider>
-        <UsersProvider>
-          <ClientsProvider>
-            <SuppliersProvider>
-              <SettingsProvider>
-                <ActivityProvider>
-                  <ProductsProvider>
-                    <SalesProvider>
-                      <WarehouseProvider>
-                        <PurchasesProvider>
-                          <RootLayoutNav />
-                          <StatusBar style="auto" />
-                        </PurchasesProvider>
-                      </WarehouseProvider>
-                    </SalesProvider>
-                  </ProductsProvider>
-                </ActivityProvider>
-              </SettingsProvider>
-            </SuppliersProvider>
-          </ClientsProvider>
-        </UsersProvider>
-      </CatalogsProvider>
-    </AuthProvider>
+    <AppErrorBoundary>
+      <AuthProvider>
+        <CatalogsProvider>
+          <UsersProvider>
+            <ClientsProvider>
+              <SuppliersProvider>
+                <SettingsProvider>
+                  <ActivityProvider>
+                    <ProductsProvider>
+                      <SalesProvider>
+                        <WarehouseProvider>
+                          <PurchasesProvider>
+                            <RootLayoutNav />
+                            <StatusBar style="auto" />
+                          </PurchasesProvider>
+                        </WarehouseProvider>
+                      </SalesProvider>
+                    </ProductsProvider>
+                  </ActivityProvider>
+                </SettingsProvider>
+              </SuppliersProvider>
+            </ClientsProvider>
+          </UsersProvider>
+        </CatalogsProvider>
+      </AuthProvider>
+    </AppErrorBoundary>
   );
 }
