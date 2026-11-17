@@ -107,6 +107,145 @@ Migraciones en `supabase/migrations/`:
 
 El esquema SQL Server original queda como referencia en `database/`.
 
+### Modelo de datos
+
+El modelo está normalizado alrededor de catálogos, personas, productos, inventario y documentos transaccionales.
+
+#### Catálogos maestros
+
+| Tabla | Propósito | Campos principales |
+| --- | --- | --- |
+| `cargos` | Roles del sistema | `id`, `nombre_cargo`, `estado` |
+| `marcas` | Marcas de calzado | `id`, `nombre_marca`, `estado` |
+| `categorias` | Categorías de producto | `id`, `nombre_categoria` |
+| `generos` | Público objetivo | `id`, `nombre_genero`, `estado` |
+| `tallas` | Tallas disponibles | `id`, `numero_talla` |
+| `colores` | Colores disponibles | `id`, `nombre_color` |
+
+#### Personas y acceso
+
+| Tabla | Propósito | Relaciones |
+| --- | --- | --- |
+| `empleados` | Perfil público del usuario | `id_cargo → cargos`; `auth_user_id → auth.users` |
+| `clientes` | Compradores | `id` referenciado por `ventas` |
+| `proveedores` | Proveedores de mercadería | Referenciado por compras y guías de entrada |
+| `auth.users` | Usuarios de Supabase Auth | Gestionado por Supabase; se vincula con `empleados.auth_user_id` |
+
+`empleados` guarda `usuario`, `email`, `documento_identidad`, `estado` y `password_hash` queda fuera del acceso público. La contraseña real vive en Supabase Auth.
+
+#### Productos e inventario
+
+| Tabla | Propósito | Relaciones |
+| --- | --- | --- |
+| `productos` | Modelo de producto | `id_marca`, `id_categoria`, `id_genero` |
+| `producto_variantes` | Talla/color/código/precios | `id_producto`, `id_talla`, `id_color` |
+| `inventario` | Stock actual y mínimo | `id_variante` único |
+| `movimientos_inventario` | Entradas, salidas y ajustes | `id_variante`, `id_empleado` |
+
+Reglas:
+
+- Un producto puede tener muchas variantes.
+- Una variante es única por producto + talla + color.
+- `codigo_barras` es único cuando existe.
+- Cada variante tiene una sola fila de inventario.
+- Todo cambio de stock genera un movimiento.
+
+#### Ventas
+
+| Tabla | Propósito |
+| --- | --- |
+| `ventas` | Cabecera: cliente, empleado, fecha, subtotal, IGV, total, comprobante |
+| `venta_detalles` | Variante, cantidad, precio y subtotal |
+
+Estados permitidos: `Completada`, `Anulada`.
+
+#### Almacén
+
+| Tabla | Propósito |
+| --- | --- |
+| `guias_salida` | Cabecera de salida de mercadería |
+| `guia_salida_detalles` | Variantes y cantidades que salen |
+| `guias_entrada` | Cabecera de recepción |
+| `guia_entrada_detalles` | Cantidades esperadas y recibidas |
+
+Estados permitidos:
+
+- `guias_salida`: `Emitida`, `Anulada`
+- `guias_entrada`: `Registrada`
+
+#### Compras
+
+| Tabla | Propósito |
+| --- | --- |
+| `pedidos_compra` | Pedido a proveedor |
+| `pedido_compra_detalles` | Líneas del pedido |
+| `cotizaciones_compra` | Cotización de proveedor |
+| `cotizacion_detalles` | Líneas de cotización |
+| `ordenes_compra` | Orden emitida al proveedor |
+| `orden_compra_detalles` | Líneas de orden |
+| `facturas_compra` | Factura del proveedor |
+
+Estados permitidos:
+
+- `pedidos_compra`: `Borrador`, `Enviado`, `Atendido`
+- `cotizaciones_compra`: `Pendiente`, `Aceptada`, `Rechazada`
+- `ordenes_compra`: `Emitida`, `Recibida`, `Pagada`
+- `facturas_compra`: `Pendiente`, `Pagada`, `Vencida`
+
+#### Operación y auditoría
+
+| Tabla | Propósito |
+| --- | --- |
+| `auditoria_sesion` | Registro de acciones críticas |
+| `app_errors` | Errores del cliente web/móvil |
+
+`app_errors` solo es legible por administradores. `auditoria_sesion` se escribe desde triggers de base de datos.
+
+#### Relaciones principales
+
+```mermaid
+erDiagram
+  CARGOS ||--o{ EMPLEADOS : asigna
+  AUTH_USERS ||--|| EMPLEADOS : vincula
+  EMPLEADOS ||--o{ VENTAS : registra
+  EMPLEADOS ||--o{ GUIAS_SALIDA : emite
+  EMPLEADOS ||--o{ AUDITORIA_SESION : genera
+
+  CLIENTES ||--o{ VENTAS : compra
+  PROVEEDORES ||--o{ PEDIDOS_COMPRA : recibe
+  PROVEEDORES ||--o{ COTIZACIONES_COMPRA : cotiza
+  PROVEEDORES ||--o{ ORDENES_COMPRA : suministra
+  PROVEEDORES ||--o{ FACTURAS_COMPRA : factura
+  PROVEEDORES ||--o{ GUIAS_ENTRADA : entrega
+
+  MARCAS ||--o{ PRODUCTOS : clasifica
+  CATEGORIAS ||--o{ PRODUCTOS : clasifica
+  GENEROS ||--o{ PRODUCTOS : clasifica
+  PRODUCTOS ||--o{ PRODUCTO_VARIANTES : tiene
+  TALLAS ||--o{ PRODUCTO_VARIANTES : define
+  COLORES ||--o{ PRODUCTO_VARIANTES : define
+  PRODUCTO_VARIANTES ||--|| INVENTARIO : controla
+  PRODUCTO_VARIANTES ||--o{ MOVIMIENTOS_INVENTARIO : mueve
+
+  VENTAS ||--o{ VENTA_DETALLES : contiene
+  PRODUCTO_VARIANTES ||--o{ VENTA_DETALLES : vendida
+  GUIAS_SALIDA ||--o{ GUIA_SALIDA_DETALLES : contiene
+  GUIAS_ENTRADA ||--o{ GUIA_ENTRADA_DETALLES : contiene
+  PEDIDOS_COMPRA ||--o{ PEDIDO_COMPRA_DETALLES : contiene
+  COTIZACIONES_COMPRA ||--o{ COTIZACION_DETALLES : contiene
+  ORDENES_COMPRA ||--o{ ORDEN_COMPRA_DETALLES : contiene
+  ORDENES_COMPRA ||--o{ FACTURAS_COMPRA : respalda
+```
+
+#### Convenciones
+
+- Claves primarias `bigint`.
+- Operaciones transaccionales usan `app_id_seq`.
+- Comprobantes y documentos usan secuencias dedicadas (`seq_comprobante`, `seq_cotizacion`, `seq_pedido`, `seq_orden`).
+- Precios y montos: `numeric(12,2)`.
+- Fechas de documentos: `date`; ventas y movimientos: `timestamptz`.
+- Restricciones únicas en documentos, RUC, códigos de barras y combinaciones producto/talla/color.
+
 ### RPCs transaccionales
 
 - `create_sale`
