@@ -163,6 +163,30 @@ test('critical transactional flows persist and keep stock consistent', async () 
     created.order = Number(order.data.id);
     expect(order.data.total).toBe(236);
 
+    const statusEntryGuide = await admin.rpc('create_entry_guide', {
+      p_numero: `E2E-GE-ORDER-${suffix}`,
+      p_fecha: new Date().toISOString().slice(0, 10),
+      p_order_id: order.data.id,
+      p_provider_id: 1,
+      p_observaciones: 'Prueba de estado',
+      p_lines: [
+        {
+          variant_id: variantId,
+          cantidad_esperada: 1,
+          cantidad_recibida: 0,
+        },
+      ],
+    });
+    expect(statusEntryGuide.error).toBeNull();
+    created.statusEntryGuide = Number(statusEntryGuide.data.id);
+
+    let orderState = await admin
+      .from('ordenes_compra')
+      .select('estado')
+      .eq('id', order.data.id)
+      .single();
+    expect(orderState.data?.estado).toBe('Recibida');
+
     const invoice = await admin.rpc('create_invoice', {
       p_serie: 'E2E',
       p_numero: String(suffix).slice(-8),
@@ -171,10 +195,17 @@ test('critical transactional flows persist and keep stock consistent', async () 
       p_emission: new Date().toISOString().slice(0, 10),
       p_due_date: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
       p_amount: 236,
-      p_status: 'Pendiente',
+      p_status: 'Pagada',
     });
     expect(invoice.error).toBeNull();
     created.invoice = Number(invoice.data.id);
+
+    orderState = await admin
+      .from('ordenes_compra')
+      .select('estado')
+      .eq('id', order.data.id)
+      .single();
+    expect(orderState.data?.estado).toBe('Pagada');
 
     const purchase = await admin.rpc('create_purchase_order', {
       p_provider_id: 1,
@@ -206,7 +237,14 @@ test('critical transactional flows persist and keep stock consistent', async () 
       .select('id', { count: 'exact', head: true })
       .eq('id_variante', variantId);
     expect(movements.count).toBeGreaterThanOrEqual(3);
+
+    const audits = await admin
+      .from('auditoria_sesion')
+      .select('id', { count: 'exact', head: true })
+      .ilike('detalle', `%${suffix}%`);
+    expect(audits.count).toBeGreaterThan(0);
   } finally {
+    await admin.from('auditoria_sesion').delete().ilike('detalle', `%${suffix}%`);
     await cleanup(admin, created, productId, variantId, inventoryId);
     await admin.auth.signOut();
   }
@@ -225,6 +263,8 @@ async function cleanup(
   if (created.purchase) await admin.from('pedidos_compra').delete().eq('id', created.purchase);
   if (created.exitGuide) await admin.from('guias_salida').delete().eq('id', created.exitGuide);
   if (created.entryGuide) await admin.from('guias_entrada').delete().eq('id', created.entryGuide);
+  if (created.statusEntryGuide)
+    await admin.from('guias_entrada').delete().eq('id', created.statusEntryGuide);
   if (created.sale) await admin.from('ventas').delete().eq('id', created.sale);
   await admin.from('movimientos_inventario').delete().eq('id_variante', variantId);
   await admin.from('inventario').delete().eq('id', inventoryId);
