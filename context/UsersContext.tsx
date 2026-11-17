@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
+} from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { Empleado } from '@/types';
@@ -22,6 +29,7 @@ interface CreateEmployeeInput {
 interface UsersContextType {
   employees: Empleado[];
   isLoading: boolean;
+  refresh: () => Promise<void>;
   addEmployee: (data: CreateEmployeeInput) => Promise<MutationResult>;
   updateEmployee: (
     id: number,
@@ -29,6 +37,7 @@ interface UsersContextType {
     password?: string,
   ) => Promise<MutationResult>;
   toggleEmployeeStatus: (id: number) => Promise<MutationResult>;
+  deleteEmployee: (id: number) => Promise<MutationResult>;
   getEmployeeById: (id: number) => Empleado | undefined;
 }
 
@@ -64,17 +73,7 @@ export function UsersProvider({ children }: { children: ReactNode }) {
   const [employees, setEmployees] = useState<Empleado[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user) {
-      setEmployees([]);
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
-    loadEmployees();
-  }, [user]);
-
-  const loadEmployees = async () => {
+  const loadEmployees = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('empleados')
@@ -88,7 +87,17 @@ export function UsersProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setEmployees([]);
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    loadEmployees();
+  }, [user, loadEmployees]);
 
   const addEmployee = async (data: CreateEmployeeInput): Promise<MutationResult> => {
     if (employees.some(employee => employee.documento_identidad === data.documento_identidad)) {
@@ -224,11 +233,37 @@ export function UsersProvider({ children }: { children: ReactNode }) {
     return { success: true };
   };
 
+  const deleteEmployee = async (id: number): Promise<MutationResult> => {
+    const { error: functionError } = await supabase.functions.invoke(
+      'admin-delete-employee',
+      { body: { employee_id: id } },
+    );
+
+    if (functionError) {
+      return {
+        success: false,
+        error: await getFunctionMessage(functionError, 'No se pudo eliminar el usuario'),
+      };
+    }
+
+    setEmployees(previous => previous.filter(employee => employee.id !== id));
+    return { success: true };
+  };
+
   const getEmployeeById = (id: number) => employees.find(employee => employee.id === id);
 
   return (
     <UsersContext.Provider
-      value={{ employees, isLoading, addEmployee, updateEmployee, toggleEmployeeStatus, getEmployeeById }}
+      value={{
+        employees,
+        isLoading,
+        refresh: loadEmployees,
+        addEmployee,
+        updateEmployee,
+        toggleEmployeeStatus,
+        deleteEmployee,
+        getEmployeeById,
+      }}
     >
       {children}
     </UsersContext.Provider>

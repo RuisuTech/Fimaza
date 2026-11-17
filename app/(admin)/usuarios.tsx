@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   useWindowDimensions,
   Platform,
 } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import AdminTopNav from '@/components/AdminTopNav';
@@ -164,13 +165,26 @@ function SelectField<T extends string | number | boolean>({
 }
 
 export default function UsuariosScreen() {
-  const { employees, addEmployee, updateEmployee, toggleEmployeeStatus } = useUsers();
+  const {
+    employees,
+    addEmployee,
+    updateEmployee,
+    toggleEmployeeStatus,
+    deleteEmployee,
+    refresh,
+  } = useUsers();
   const { cargos } = useCatalogs();
   const { user } = useAuth();
   const { log } = useActivity();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
   const isMobile = width < 700;
+
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+    }, [refresh]),
+  );
 
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [editingEmployee, setEditingEmployee] = useState<Empleado | null>(null);
@@ -433,6 +447,44 @@ export default function UsuariosScreen() {
               `Empleado "${employee.nombres} ${employee.apellidos}" ${
                 willDeactivate ? 'desactivado' : 'activado'
               }`,
+            );
+          }
+          setAlertState(prev => ({ ...prev, visible: false, onConfirm: undefined }));
+        },
+      },
+    );
+  };
+
+  const handleDeleteEmployee = (employee: Empleado) => {
+    if (employee.id === user?.employeeId) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      showAlert(
+        'warning',
+        'Acción no permitida',
+        'No puedes eliminar tu propio usuario mientras tienes la sesión activa.',
+      );
+      return;
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    showAlert(
+      'warning',
+      'Eliminar usuario',
+      `Se eliminarán el acceso y el perfil de "${employee.nombres} ${employee.apellidos}". Esta acción no se puede deshacer.`,
+      {
+        showCancel: true,
+        confirmText: 'Eliminar',
+        onConfirm: async () => {
+          const result = await deleteEmployee(employee.id);
+          if (!result.success) {
+            showAlert('error', 'No se pudo eliminar', result.error || 'Error al eliminar.');
+            return;
+          }
+          if (user?.employeeId) {
+            log(
+              user.employeeId,
+              'EMPLOYEE_DELETED',
+              `Empleado "${employee.nombres} ${employee.apellidos}" eliminado`,
             );
           }
           setAlertState(prev => ({ ...prev, visible: false, onConfirm: undefined }));
@@ -771,6 +823,13 @@ export default function UsuariosScreen() {
                                   {employee.estado ? 'Desactivar' : 'Activar'}
                                 </Text>
                               </TouchableOpacity>
+                              <TouchableOpacity
+                                style={styles.deleteButton}
+                                onPress={() => handleDeleteEmployee(employee)}
+                                activeOpacity={0.8}
+                              >
+                                <Text style={styles.deleteButtonText}>Eliminar</Text>
+                              </TouchableOpacity>
                             </View>
                           </View>
                         ))
@@ -779,8 +838,8 @@ export default function UsuariosScreen() {
                   </ScrollView>
 
                   <Text style={styles.tableFooter}>
-                    Los usuarios no se eliminan, se desactivan. Un usuario inactivo no puede
-                    iniciar sesión.
+                    Puedes desactivar o eliminar usuarios. Un usuario inactivo no puede iniciar
+                    sesión.
                   </Text>
                 </View>
               </View>
@@ -1197,6 +1256,19 @@ const styles = StyleSheet.create({
   },
   statusButtonText: {
     color: PALETTE.white,
+    fontSize: 11,
+    fontWeight: FontWeight.semibold,
+  },
+  deleteButton: {
+    backgroundColor: PALETTE.card,
+    borderWidth: 1,
+    borderColor: '#fca5a5',
+    borderRadius: BorderRadius.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  deleteButtonText: {
+    color: '#b91c1c',
     fontSize: 11,
     fontWeight: FontWeight.semibold,
   },
