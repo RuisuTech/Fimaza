@@ -8,7 +8,10 @@ interface ClientsContextType {
   clients: Cliente[];
   isLoading: boolean;
   addClient: (data: Omit<Cliente, 'id'>) => Promise<{ success: boolean; error?: string }>;
-  updateClient: (id: number, updates: Partial<Cliente>) => Promise<void>;
+  updateClient: (
+    id: number,
+    updates: Partial<Cliente>,
+  ) => Promise<{ success: boolean; error?: string }>;
 }
 
 const ClientsContext = createContext<ClientsContextType | undefined>(undefined);
@@ -83,16 +86,21 @@ export function ClientsProvider({ children }: { children: ReactNode }) {
     return { success: true };
   };
 
-  const updateClient = async (id: number, updates: Partial<Cliente>) => {
-    setClients(previous =>
-      previous.map(client => (client.id === id ? { ...client, ...updates } : client)),
-    );
-
+  const updateClient = async (
+    id: number,
+    updates: Partial<Cliente>,
+  ): Promise<{ success: boolean; error?: string }> => {
     const payload: Record<string, unknown> = { ...updates };
     if ('telefono' in updates) payload.telefono = updates.telefono ?? null;
     if ('correo' in updates) payload.correo = updates.correo ?? null;
+
     const { error } = await supabase.from('clientes').update(payload).eq('id', id);
-    if (error) console.error('Error actualizando cliente:', error);
+    if (error) return { success: false, error: error.message };
+
+    setClients(previous =>
+      previous.map(client => (client.id === id ? { ...client, ...updates } : client)),
+    );
+    return { success: true };
   };
 
   return (

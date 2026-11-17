@@ -255,7 +255,12 @@ export default function ClientesScreen() {
     };
 
     if (editingClient) {
-      updateClient(editingClient.id, payload);
+      const result = await updateClient(editingClient.id, payload);
+      if (!result.success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        showAlert('error', 'No se pudo actualizar', result.error || 'Error al guardar el cliente.');
+        return;
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showAlert('success', 'Cliente actualizado', 'Los cambios se guardaron correctamente.');
     } else {

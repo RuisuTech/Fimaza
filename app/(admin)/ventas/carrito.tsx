@@ -17,6 +17,8 @@ import { useClients } from '@/context/ClientsContext';
 import { useCatalogs } from '@/context/CatalogsContext';
 import { useProducts } from '@/context/ProductsContext';
 import { useSales } from '@/context/SalesContext';
+import { exportPdf } from '@/lib/export';
+import { buildSaleReceiptHtml, SaleReceiptData } from '@/lib/saleReceipt';
 
 interface CartLine {
   id: string;
@@ -42,6 +44,7 @@ export default function CarritoScreen() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [clientQuery, setClientQuery] = useState('');
   const [clientId, setClientId] = useState<number | null>(null);
+  const [lastSale, setLastSale] = useState<SaleReceiptData | null>(null);
 
   const selectedProduct = products.find(product => String(product.id) === productId);
   const productVariants = variants.filter(variant => variant.id_producto === selectedProduct?.id);
@@ -304,6 +307,22 @@ export default function CarritoScreen() {
                   showAlert('error', 'No se pudo generar', result.error ?? 'Error al guardar.');
                   return;
                 }
+                setLastSale({
+                  comprobante: result.venta.comprobante ?? '',
+                  fecha: new Date(result.venta.fecha).toLocaleString('es-PE'),
+                  cliente: selectedClient.nombres_razon_social,
+                  documentoCliente: `${selectedClient.tipo_documento} ${selectedClient.numero_documento}`,
+                  items: cart.map(line => ({
+                    producto: line.productName,
+                    talla: line.size,
+                    cantidad: line.qty,
+                    precio: line.price,
+                    subtotal: line.qty * line.price,
+                  })),
+                  subtotal: result.venta.subtotal,
+                  igv: result.venta.igv,
+                  total: result.venta.total,
+                });
                 setCart([]);
                 showAlert(
                   'success',
@@ -319,6 +338,44 @@ export default function CarritoScreen() {
               onPress={() => setCart([])}
             />
           </AdminCard>
+
+          {lastSale ? (
+            <AdminCard title="Última boleta">
+              <View style={S.summaryRow}>
+                <Text style={S.summaryLabel}>Comprobante</Text>
+                <Text style={S.summaryValue}>{lastSale.comprobante}</Text>
+              </View>
+              <View style={S.summaryRow}>
+                <Text style={S.summaryLabel}>Cliente</Text>
+                <Text style={S.summaryValue}>{lastSale.cliente}</Text>
+              </View>
+              <View style={S.summaryRow}>
+                <Text style={S.summaryLabel}>Total</Text>
+                <Text style={S.summaryValue}>{formatMoney(lastSale.total)}</Text>
+              </View>
+              <AdminButton
+                label="Descargar boleta PDF"
+                icon="download-outline"
+                fullWidth
+                onPress={async () => {
+                  try {
+                    await exportPdf(buildSaleReceiptHtml(lastSale));
+                    showAlert(
+                      'success',
+                      'Boleta generada',
+                      'La boleta se abrió para imprimir o guardar.',
+                    );
+                  } catch (error) {
+                    showAlert(
+                      'error',
+                      'No se pudo generar la boleta',
+                      error instanceof Error ? error.message : 'Error al generar el PDF.',
+                    );
+                  }
+                }}
+              />
+            </AdminCard>
+          ) : null}
         </View>
       </View>
 
