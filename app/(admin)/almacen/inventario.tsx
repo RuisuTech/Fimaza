@@ -16,6 +16,7 @@ import { useAdminAlert } from '@/hooks/useAdminAlert';
 import { useCatalogs } from '@/context/CatalogsContext';
 import { useProducts } from '@/context/ProductsContext';
 import { useWarehouse } from '@/context/WarehouseContext';
+import { exportCsv } from '@/lib/export';
 
 interface InventoryRow {
   producto: string;
@@ -180,7 +181,40 @@ export default function InventarioScreen() {
                 label="Exportar"
                 variant="secondary"
                 icon="download-outline"
-                onPress={() => showAlert('info', 'Exportación', 'El inventario se preparó para descarga.')}
+                onPress={async () => {
+                  try {
+                    await exportCsv(
+                      `inventario-${new Date().toISOString().slice(0, 10)}.csv`,
+                      [
+                        [
+                          'Producto',
+                          'Talla',
+                          'Stock inicial',
+                          'Entradas',
+                          'Salidas',
+                          'Stock final',
+                          'Estado',
+                        ],
+                        ...rows.map(row => [
+                          row.producto,
+                          row.talla,
+                          row.inicial,
+                          row.entradas,
+                          row.salidas,
+                          row.final,
+                          row.estado,
+                        ]),
+                      ],
+                    );
+                    showAlert('success', 'Exportación completa', 'El CSV del inventario fue generado.');
+                  } catch (error) {
+                    showAlert(
+                      'error',
+                      'No se pudo exportar',
+                      error instanceof Error ? error.message : 'Error al generar el CSV.',
+                    );
+                  }
+                }}
               />
             </View>
           </View>

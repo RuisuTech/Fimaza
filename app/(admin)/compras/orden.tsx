@@ -16,6 +16,7 @@ import { useCatalogs } from '@/context/CatalogsContext';
 import { useProducts } from '@/context/ProductsContext';
 import { usePurchases } from '@/context/PurchasesContext';
 import { useSuppliers } from '@/context/SuppliersContext';
+import { exportPdf, escapeHtml } from '@/lib/export';
 import { OrdenCompra } from '@/types';
 
 interface OrderDetail {
@@ -78,6 +79,86 @@ export default function OrdenCompraScreen() {
     const igv = subtotal * 0.18;
     return { subtotal, igv, total: subtotal + igv };
   }, [rows]);
+
+  const handleDownloadPdf = async () => {
+    const rowsHtml = rows
+      .map(
+        row => `
+          <tr>
+            <td>${escapeHtml(row.producto)}</td>
+            <td style="text-align:center">${escapeHtml(row.talla)}</td>
+            <td style="text-align:center">${row.cantidad}</td>
+            <td style="text-align:right">S/ ${row.precio.toFixed(2)}</td>
+            <td style="text-align:right">S/ ${row.subtotal.toFixed(2)}</td>
+          </tr>
+        `,
+      )
+      .join('');
+
+    const html = `<!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <style>
+            body { font-family: Helvetica, Arial, sans-serif; color: #0B2545; padding: 32px; }
+            h1 { margin: 0 0 4px; font-size: 24px; }
+            .muted { color: #64748b; font-size: 12px; }
+            .header { border-bottom: 2px solid #255bb3; padding-bottom: 16px; margin-bottom: 20px; }
+            .meta { display: flex; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+            th { background: #EEF4FB; color: #334155; font-size: 11px; text-align: left; padding: 10px; border-bottom: 1px solid #D5DCE6; }
+            td { padding: 10px; border-bottom: 1px solid #E8EDF3; font-size: 12px; }
+            .totals { margin-left: auto; width: 260px; margin-top: 20px; }
+            .totals div { display: flex; justify-content: space-between; padding: 6px 0; font-size: 12px; }
+            .total { border-top: 2px solid #D5DCE6; margin-top: 8px; padding-top: 12px; font-size: 20px; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>FIMAZA</h1>
+            <div class="muted">Orden de compra</div>
+          </div>
+          <div class="meta">
+            <div>
+              <strong>${escapeHtml(orderNumber)}</strong><br />
+              <span class="muted">Fecha: ${escapeHtml(date)}</span>
+            </div>
+            <div>
+              <strong>${escapeHtml(provider?.razon_social ?? 'Sin proveedor')}</strong><br />
+              <span class="muted">${escapeHtml(selectedQuote?.numero ?? '')}</span>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th style="text-align:center">Talla</th>
+                <th style="text-align:center">Cant.</th>
+                <th style="text-align:right">Precio</th>
+                <th style="text-align:right">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+          <div class="totals">
+            <div><span>Subtotal</span><strong>S/ ${totals.subtotal.toFixed(2)}</strong></div>
+            <div><span>IGV 18%</span><strong>S/ ${totals.igv.toFixed(2)}</strong></div>
+            <div class="total"><span>Total</span><span>S/ ${totals.total.toFixed(2)}</span></div>
+          </div>
+        </body>
+      </html>`;
+
+    try {
+      await exportPdf(html);
+      showAlert('success', 'PDF generado', 'La orden se abrió para imprimir o guardar.');
+    } catch (error) {
+      showAlert(
+        'error',
+        'No se pudo generar el PDF',
+        error instanceof Error ? error.message : 'Error al generar el PDF.',
+      );
+    }
+  };
 
   const detailColumns: DataTableColumn<OrderDetail>[] = [
     {
@@ -246,7 +327,7 @@ export default function OrdenCompraScreen() {
               variant="secondary"
               icon="download-outline"
               fullWidth
-              onPress={() => showAlert('info', 'PDF', 'La orden se preparó para descarga.')}
+              onPress={handleDownloadPdf}
             />
           </AdminCard>
         </View>

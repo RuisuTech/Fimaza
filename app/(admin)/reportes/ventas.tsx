@@ -15,6 +15,7 @@ import { useAdminAlert } from '@/hooks/useAdminAlert';
 import { useProducts } from '@/context/ProductsContext';
 import { useSales } from '@/context/SalesContext';
 import { useUsers } from '@/context/UsersContext';
+import { exportCsv } from '@/lib/export';
 
 interface ReportRow {
   producto: string;
@@ -186,7 +187,24 @@ export default function ReporteVentasScreen() {
               label="Exportar"
               variant="secondary"
               icon="download-outline"
-              onPress={() => showAlert('info', 'Exportación', 'El reporte se preparó para descarga.')}
+              onPress={async () => {
+                try {
+                  await exportCsv(
+                    `reporte-ventas-${new Date().toISOString().slice(0, 10)}.csv`,
+                    [
+                      ['Producto', 'Pares', 'Importe'],
+                      ...report.rows.map(row => [row.producto, row.pares, row.importe.toFixed(2)]),
+                    ],
+                  );
+                  showAlert('success', 'Exportación completa', 'El CSV del reporte fue generado.');
+                } catch (error) {
+                  showAlert(
+                    'error',
+                    'No se pudo exportar',
+                    error instanceof Error ? error.message : 'Error al generar el CSV.',
+                  );
+                }
+              }}
             />
           </View>
         </AdminCard>

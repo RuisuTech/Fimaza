@@ -32,6 +32,20 @@ test('admin can log in, open users and see role options', async ({ page }) => {
   await expect(page.getByText('Almacenero', { exact: true }).first()).toBeVisible();
 });
 
+test('admin can export the sales report as CSV', async ({ page }) => {
+  test.skip(!adminEmail || !adminPassword, 'Admin E2E credentials are not configured');
+
+  await login(page, adminEmail!, adminPassword!);
+  await expect(page.getByText('Panel principal', { exact: true })).toBeVisible();
+  await page.goto('/reportes/ventas');
+  await expect(page.getByText('Reporte de ventas', { exact: true })).toBeVisible();
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByText('Exportar', { exact: true }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^reporte-ventas-.*\.csv$/);
+});
+
 test('collaborator sees the preparation screen and cannot access users', async ({ page }) => {
   test.skip(
     !collaboratorEmail || !collaboratorPassword,
