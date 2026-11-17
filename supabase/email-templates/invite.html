@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Activa tu cuenta</title>
+  </head>
+  <body style="margin:0;padding:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f5f7;padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#ffffff;border:1px solid #D5DCE6;border-radius:12px;overflow:hidden;">
+            <tr>
+              <td style="background:#0B2545;padding:24px 32px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td style="width:40px;height:40px;border-radius:8px;background:#3b82f6;text-align:center;vertical-align:middle;color:#ffffff;font-size:20px;font-weight:bold;">F</td>
+                    <td style="padding-left:12px;color:#ffffff;font-size:20px;font-weight:bold;letter-spacing:0.5px;">FIMAZA</td>
+                  </tr>
+                </table>
+                <div style="margin-top:8px;color:#c9d7ea;font-size:12px;letter-spacing:0.4px;">Fimaza Multiplataforma</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px;">
+                <h1 style="margin:0 0 16px;color:#0B2545;font-size:24px;line-height:32px;">Activa tu cuenta</h1>
+                <p style="margin:0 0 20px;font-size:14px;line-height:22px;">
+                  Tu cuenta en <strong>Fimaza Multiplataforma</strong> fue creada. Actívala para
+                  empezar a usar el sistema.
+                </p>
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;">
+                  <tr>
+                    <td style="border-radius:8px;background:#255bb3;">
+                      <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 28px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:bold;border-radius:8px;">
+                        Activar cuenta
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:0 0 8px;font-size:12px;line-height:18px;color:#6b7280;">
+                  Si el botón no funciona, copia y pega este enlace:
+                </p>
+                <p style="margin:0 0 24px;font-size:12px;line-height:18px;word-break:break-all;">
+                  <a href="{{ .ConfirmationURL }}" style="color:#255bb3;">{{ .ConfirmationURL }}</a>
+                </p>
+                <p style="margin:0;font-size:12px;line-height:19px;color:#6b7280;">
+                  Si no esperabas esta invitación, puedes ignorar este correo.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="background:#f8fafc;padding:20px 32px;border-top:1px solid #E8EDF3;text-align:center;font-size:11px;line-height:18px;color:#6b7280;">
+                Fimaza Multiplataforma · Gestión de calzado<br />
+                Soporte: soporte@ruisu.tech
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
