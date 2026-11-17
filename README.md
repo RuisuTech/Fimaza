@@ -1,541 +1,292 @@
 # Fimaza Multiplataforma
 
-Aplicación multiplataforma para gestión de inventario de zapatillas, diseñada para negocios de calzado. Funciona en **iOS**, **Android** y **Web**.
+Sistema de gestión de inventario, ventas y compras para negocios de calzado. Funciona en web, Android e iOS con Expo y Supabase.
 
-> **Estado actual:** demo funcional con Supabase Auth, RLS, ventas, almacén y compras. Incluye 34 rutas, 10 vistas operativas y creación de usuarios vía Edge Function. Pendiente para producción: despliegue, dominio, SMTP, backups y pruebas E2E.
+- Producción: `https://fimaza.ruisu.tech`
+- Supabase: PostgreSQL + Auth + RLS + Edge Functions
+- Deploy web: Vercel
+- Backups: GitHub Releases cifrados con GPG
 
----
+## Estado actual
 
-## Inicio Rápido
+El sistema está operativo para uso interno/admin con estas vistas:
 
-### Prerrequisitos
+- Login y recuperación de contraseña.
+- Panel principal.
+- Gestión: Usuarios, Clientes, Productos y Proveedores.
+- Ventas: Carrito de compras y boleta PDF.
+- Reportes: Reporte de ventas y exportación CSV.
+- Almacén: Guía de salida, guía de entrada, inventario y faltantes.
+- Compras: Pedidos, cotizaciones, orden de compra y facturas.
+- Colaboradores: pantalla de “Módulos en preparación”.
 
-- [Node.js](https://nodejs.org/) 18+
-- npm o yarn
-- Para iOS: [CocoaPods](https://cocoapods.org/) + Xcode
-- Para Android: Android Studio + Android SDK
+## Stack
 
-### 1. Clonar el repositorio
+| Área | Tecnología |
+| --- | --- |
+| Framework | Expo SDK 54, React Native 0.81, React 19 |
+| Router | expo-router v6 |
+| Lenguaje | TypeScript estricto |
+| Backend | Supabase PostgreSQL |
+| Auth | Supabase Auth |
+| Seguridad | RLS + RPCs `security definer` |
+| Archivos | expo-file-system, expo-sharing |
+| PDF | expo-print |
+| Tests | Playwright |
+| Web deploy | Vercel |
+
+## Requisitos
+
+- Node.js 22+
+- npm
+- Proyecto Supabase con Auth habilitado
+- Cuenta Vercel para despliegue web
+- Opcional: cuenta EAS para Android/iOS
+
+## Inicio rápido
 
 ```bash
-git clone https://github.com/tu-usuario/NextInventory.git
-cd NextInventory
-```
-
-### 2. Instalar dependencias
-
-```bash
+git clone https://github.com/RuisuTech/Fimaza.git
+cd Fimaza
 npm install
 ```
 
-### 3. Iniciar la aplicación
+Crea `.env.local`:
+
+```env
+EXPO_PUBLIC_SUPABASE_URL=https://TU-PROJECT-REF.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=TU_ANON_KEY
+```
+
+Inicia la app:
 
 ```bash
 npx expo start --web
 ```
 
-Esto abrirá el Expo DevTools en el navegador. Desde ahí puedes:
+La app queda disponible en `http://localhost:8081`.
 
-- **Expo Go** (iOS/Android): Escanea el código QR con la app Expo Go.
-- **Web**: Presiona `w` en la terminal.
-- **Simulador iOS**: Presiona `i` en la terminal.
-- **Emulador Android**: Presiona `a` en la terminal.
+## Credenciales
 
-### Credenciales
+Las credenciales de acceso **no se publican en el repositorio**. Se entregan por un canal seguro.
 
-Las credenciales de acceso no se publican en el repositorio. Se entregan por un canal seguro y deben rotarse si alguna vez se compartieron en texto plano.
+Usuarios base:
 
-### Scripts Disponibles
+- `admin` — Administrador
+- `vendedora01` — Colaborador
 
-| Script                  | Descripción                           |
-| ----------------------- | ------------------------------------- |
-| `npm start`             | Inicia el servidor de desarrollo Expo |
-| `npm run android`       | Abre en emulador Android              |
-| `npm run ios`           | Abre en simulador iOS                 |
-| `npm run web`           | Abre la versión web                   |
-| `npm run lint`          | Ejecuta ESLint                        |
-| `npm run typecheck`     | Ejecuta TypeScript sin emitir         |
-| `npm run export:web`    | Genera el build web estático          |
-| `npm run reset-project` | Resetea el proyecto a estado inicial  |
+Si alguna credencial se compartió en texto plano, debe rotarse.
 
-### Verificación y despliegue
+## Scripts
+
+| Comando | Descripción |
+| --- | --- |
+| `npm start` | Inicia Expo |
+| `npm run web` | Inicia la versión web |
+| `npm run android` | Inicia Android |
+| `npm run ios` | Inicia iOS |
+| `npm run lint` | Ejecuta ESLint |
+| `npm run typecheck` | Ejecuta TypeScript sin emitir |
+| `npm run export:web` | Genera el build web en `dist/` |
+| `npm run test:e2e` | Ejecuta Playwright |
+| `npm run test:e2e:ui` | Abre Playwright UI |
+
+## Base de datos
+
+Migraciones en `supabase/migrations/`:
+
+- `initial_schema`: tablas maestras, clientes, proveedores y empleados.
+- `login_rpc`: funciones de login.
+- `transactional_schema`: ventas, almacén y compras.
+- `auth_rls`: Supabase Auth y políticas RLS.
+- `transactional_rpcs`: ventas, guías, pedidos, cotizaciones, órdenes y facturas.
+- `active_user_policies`: bloqueo de usuarios desactivados.
+- `app_errors`: registro de errores del cliente.
+- `business_states_audit`: estados automáticos y auditoría.
+- `revoke_extra_function_access`: permisos mínimos para funciones.
+
+El esquema SQL Server original queda como referencia en `database/`.
+
+### RPCs transaccionales
+
+- `create_sale`
+- `create_exit_guide`
+- `create_entry_guide`
+- `create_purchase_order`
+- `create_quote`
+- `create_order_from_quote`
+- `create_invoice`
+
+Estas funciones actualizan cabecera, detalle, stock y movimientos dentro de una sola transacción. El stock se bloquea con `FOR UPDATE`.
+
+### RLS
+
+- **Admin:** acceso completo.
+- **Colaborador:** lectura de catálogos/clientes/productos/inventario y su propio perfil.
+- **Anon:** solo `resolve_login_email` y `log_client_error`.
+
+Las tablas de ventas, compras, almacén y auditoría son solo para administradores.
+
+## Autenticación
+
+- Login por usuario, email o DNI.
+- Supabase Auth con email/contraseña.
+- Sesión persistida en AsyncStorage.
+- Perfil vinculado por `empleados.auth_user_id`.
+- Recuperación de contraseña con enlace por correo.
+
+### Edge Functions
+
+- `admin-create-employee`: crea usuario en Auth y perfil.
+- `admin-update-employee`: actualiza email, contraseña y perfil.
+- `admin-delete-employee`: elimina usuario de Auth y perfil.
+
+Nunca coloques `SUPABASE_SERVICE_ROLE_KEY` en el cliente. Supabase la inyecta en las Edge Functions.
+
+## Correo
+
+Proveedor: **Resend**.
+
+- Host: `smtp.resend.com`
+- Puerto: `587`
+- Usuario: `resend`
+- Remitente: `soporte@ruisu.tech`
+- Dominio verificado: `ruisu.tech`
+
+Plantillas HTML en `supabase/email-templates/`:
+
+- `recovery.html`
+- `invite.html`
+- `confirmation.html`
+
+Configurar en Supabase Dashboard → Authentication → Email Templates.
+
+## Backups
+
+Workflow: `.github/workflows/backup.yml`.
+
+- Corre diario a las 03:00 UTC.
+- Ejecuta `pg_dump`.
+- Cifra con GPG usando `BACKUP_PASSPHRASE`.
+- Publica el archivo como GitHub Release.
+- Elimina backups de más de 30 días.
+
+Secrets necesarios:
+
+```text
+SUPABASE_DB_URL
+BACKUP_PASSPHRASE
+```
+
+Usar conexión **Session pooler** de Supabase para `SUPABASE_DB_URL`.
+
+El repositorio debe permanecer **privado** porque los releases contienen backups cifrados.
+
+## Testing
+
+Playwright:
 
 ```bash
+PLAYWRIGHT_BASE_URL=https://fimaza.ruisu.tech \
+E2E_ADMIN_EMAIL=... \
+E2E_ADMIN_PASSWORD=... \
+E2E_COLLAB_EMAIL=... \
+E2E_COLLAB_PASSWORD=... \
+npm run test:e2e
+```
+
+Cubre:
+
+- Login admin/colaborador.
+- Roles y RLS.
+- Módulos operativos.
+- CRUD de clientes, proveedores y productos.
+- Venta, stock, guías y compras.
+- Estados y auditoría.
+- Exportación CSV.
+
+Workflow manual: `.github/workflows/e2e.yml`.
+
+Secrets:
+
+```text
+EXPO_PUBLIC_SUPABASE_URL
+EXPO_PUBLIC_SUPABASE_ANON_KEY
+E2E_ADMIN_EMAIL
+E2E_ADMIN_PASSWORD
+E2E_COLLAB_EMAIL
+E2E_COLLAB_PASSWORD
+```
+
+## CI
+
+`.github/workflows/ci.yml` ejecuta:
+
+```bash
+npm ci
 npm run typecheck
 npm run lint
 npm run export:web
 ```
 
-Build móvil con EAS:
+## Deploy web en Vercel
+
+1. Importar el repositorio en Vercel.
+2. Configurar variables:
+   - `EXPO_PUBLIC_SUPABASE_URL`
+   - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+3. Vercel usa `vercel.json`:
+   - Build: `npm run export:web`
+   - Output: `dist`
+4. Asignar el dominio `fimaza.ruisu.tech`.
+5. En Supabase Auth configurar:
+   - Site URL: `https://fimaza.ruisu.tech`
+   - Redirect: `https://fimaza.ruisu.tech/reset-password`
+
+## Android/iOS
+
+`eas.json` ya incluye perfiles `development`, `preview` y `production`.
 
 ```bash
 npx eas-cli build --profile production
 ```
 
-Antes de desplegar, configura `EXPO_PUBLIC_SUPABASE_URL` y `EXPO_PUBLIC_SUPABASE_ANON_KEY` en el entorno de build. Las Edge Functions usan `SUPABASE_SERVICE_ROLE_KEY`, que Supabase inyecta automáticamente.
+Bundle ID: `com.fimaza.multiplataforma`.
 
----
+## Estructura
 
-## Stack Tecnológico
-
-| Categoría      | Tecnología                                         |
-| -------------- | -------------------------------------------------- |
-| Framework      | Expo SDK 54 (React Native 0.81.5)                 |
-| Router         | expo-router v6                                     |
-| Lenguaje       | TypeScript 5.9.2                                   |
-| Estilos        | React Native StyleSheet + tema personalizado       |
-| Navegación     | expo-router v6                                     |
-| Estado         | React Context + Supabase                           |
-| Almacenamiento | Supabase PostgreSQL + AsyncStorage local (demo)    |
-| Iconos         | @expo/vector-icons (Ionicons)                      |
-| Haptics        | expo-haptics                                       |
-| Animaciones    | react-native-reanimated v4                         |
-| Imágenes       | expo-image v3                                      |
-| Compartir      | expo-print + expo-sharing                          |
-| Trabajo        | react-native-worklets                              |
-
----
-
-## Base de Datos
-
-Motor: **Supabase PostgreSQL**.
-
-- Migraciones: `supabase/migrations/`
-- Edge Functions: `supabase/functions/admin-create-employee` y `admin-update-employee`
-- Variables locales: `.env.local` (no se versiona); plantilla en `.env.example`
-- Seguridad: Supabase Auth, RLS activo y RPCs transaccionales para ventas/almacén/compras.
-- Migración pendiente: registrar el historial con Supabase CLI y configurar backups.
-
-> **Nota:** el script [`database/SQLQuery1-BD -FIMAZA -Releasse1.sql`](database/SQLQuery1-BD%20-FIMAZA%20-Releasse1.sql) queda como referencia del esquema SQL Server original.
-
-### Diagrama de Relaciones
-
-```
-cargo ─────────────────────┐
-                           │
-empleado ──→ cargo         │
-    │                      │
-    ├──→ auditoria_sesion  │
-    ├──→ actividad_log     │
-    │                      │
-    ├──→ historial_movimiento
-    │         │            │
-    │         ├──→ tipo_movimiento
-    │         └──→ inventario
-    │                  │   │
-    │                  │   └──→ producto_variante
-    │                  │            │
-    │                  │            ├──→ producto ──→ marca
-    │                  │            │       │   ──→ categoria
-    │                  │            │       └──→ genero
-    │                  │            │
-    │                  │            ├──→ talla
-    │                  │            └──→ color
-    │                  │
-    │                  └──→ venta_detalle ──→ venta_cabecera
-    │                                          │
-    │                                          └──→ cliente
-    │
-    └──→ compra_cabecera ──→ compra_detalle ──→ producto_variante
-              │
-              └──→ proveedor
+```text
+app/
+  (admin)/          Panel y módulos administrativos
+  (collaborator)/   Pantalla de espera para colaboradores
+  login.tsx
+  forgot-password.tsx
+  reset-password.tsx
+components/
+  admin/            Componentes compartidos del design system
+context/            Auth, usuarios, clientes, productos, ventas, almacén, compras
+lib/                Supabase, exportaciones, recibos, monitoreo
+supabase/
+  functions/        Edge Functions
+  migrations/       Migraciones SQL
+  email-templates/  Plantillas de correo
+e2e/                Pruebas Playwright
 ```
 
-### 1. Tablas Maestras (Catálogos)
-
-| Tabla             | Campos Clave                                                                | Descripción                                    |
-| ----------------- | --------------------------------------------------------------------------- | ---------------------------------------------- |
-| `cargo`           | id, nombre_cargo, descripcion, estado                                       | Roles: Administrador, Vendedor, Almacenero     |
-| `marca`           | id, nombre_marca, estado                                                    | Marcas de zapatillas (Nike, Adidas, etc.)      |
-| `categoria`       | id, nombre_categoria, descripcion                                           | Categorías (Running, Casual, Basketball, etc.) |
-| `genero`          | id, nombre_genero, estado                                                   | Géneros (Hombre, Mujer, Unisex, Niño, Niña)    |
-| `talla`           | id, numero_talla                                                            | Tallas (35-45)                                 |
-| `color`           | id, nombre_color                                                            | Colores (Negro, Blanco, Rojo, etc.)            |
-| `tipo_movimiento` | id, nombre_movimiento, naturaleza                                           | Tipos de movimiento de stock                   |
-| `cliente`         | id, tipo_documento, numero_documento, nombres_razon_social, telefono        | Clientes (DNI, RUC, CE)                        |
-| `proveedor`       | id, ruc, razon_social, telefono, direccion, email                           | Proveedores                                    |
-| `promocion`       | id, nombre_promocion, porcentaje_descuento, fecha_inicio, fecha_fin, estado | Promociones con vigencia                       |
-
-### 2. Tablas de Productos
-
-| Tabla               | Campos Clave                                                                    | Descripción                           |
-| ------------------- | ------------------------------------------------------------------------------- | ------------------------------------- |
-| `producto`          | id, id_marca, id_categoria, id_genero, nombre, descripcion, estado              | Producto base (ej: "Nike Air Max 90") |
-| `producto_variante` | id, id_producto, id_talla, id_color, codigo_barras, precio_compra, precio_venta | Variante específica con precios       |
-| `inventario`        | id, id_variante, stock_actual, stock_minimo                                     | Stock por variante (1:1 con variante) |
-
-**Relación Producto → Variante → Inventario:**
-
-- Un `producto` tiene muchas `producto_variante` (cada talla/color es una variante)
-- Cada `producto_variante` tiene exactamente un registro en `inventario`
-- Los precios (`precio_compra`, `precio_venta`) viven a nivel de variante
-- El `precio_venta` debe ser >= `precio_compra` (CHECK constraint)
-
-### 3. Tablas de Movimientos
-
-| Tabla                  | Campos Clave                                                                                  | Descripción                              |
-| ---------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| `historial_movimiento` | id, id_inventario, id_tipo_movimiento, id_empleado, cantidad, fecha_movimiento, observaciones | Registro de cada entrada/salida de stock |
-
-**Tipos de Movimiento (4 tipos actuales):**
-
-| ID  | Nombre          | Naturaleza | Uso                                          |
-| --- | --------------- | ---------- | -------------------------------------------- |
-| 1   | Compra          | Entrada    | Ingreso de mercadería por compra a proveedor |
-| 2   | Ajuste positivo | Entrada    | Corrección manual de stock al alza           |
-| 3   | Ajuste negativo | Salida     | Corrección manual de stock a la baja         |
-| 4   | Merma           | Salida     | Pérdida, daño o vencimiento de mercadería    |
-
-> **Nota:** Anteriormente existían 7 tipos (incluyendo Venta y Devoluciones). Se simplificaron a 4 porque las ventas registran su propio movimiento como `ajuste negativo` (tipo 3) automáticamente al completarse.
-
-### 4. Tablas de Ventas
-
-| Tabla            | Campos Clave                                                                                                   | Descripción                         |
-| ---------------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| `venta_cabecera` | id, id_cliente, id_empleado_vendedor, fecha_venta, total_venta, igv, metodo_pago, monto_pagado, vuelto, estado | Cabecera de venta con datos de pago |
-| `venta_detalle`  | id, id_venta, id_variante, cantidad, precio_unitario, descuento_aplicado, subtotal                             | Línea de venta con precio unitario  |
-| `comprobante`    | id, id_venta, tipo_comprobante, serie, numero_correlativo, fecha_emision                                       | Boleta o Factura electrónica        |
-
-**Flujo de venta:**
-
-1. Se crea `venta_cabecera` con totales y método de pago
-2. Por cada item del carrito se crea un `venta_detalle` con `precio_unitario = variante.precio_venta`
-3. Se decrementa el stock: `inventario.stock_actual -= cantidad`
-4. Se registra movimiento tipo 3 (Ajuste negativo) en `historial_movimiento`
-
-### 5. Tablas de Compras
-
-| Tabla             | Campos Clave                                                                      | Descripción                    |
-| ----------------- | --------------------------------------------------------------------------------- | ------------------------------ |
-| `compra_cabecera` | id, id_proveedor, id_empleado, numero_factura, fecha_compra, total_compra, estado | Cabecera de compra a proveedor |
-| `compra_detalle`  | id, id_compra, id_variante, cantidad, costo_unitario, subtotal                    | Línea de compra                |
-
-### 6. Tablas de Seguridad y Auditoría
-
-| Tabla              | Campos Clave                                                                        | Descripción                              |
-| ------------------ | ----------------------------------------------------------------------------------- | ---------------------------------------- |
-| `empleado`         | id, id_cargo, nombres, apellidos, documento_identidad, email, password_hash, estado | Usuarios del sistema                     |
-| `auditoria_sesion` | id, id_empleado, fecha_ingreso, fecha_salida, direccion_ip                          | Sesiones de login/logout                 |
-| `actividad_log`    | id, id_empleado, tipo_accion, detalle, fecha                                        | Log de acciones realizadas en el sistema |
-
-### 7. Tabla de Alertas
-
-| Tabla          | Campos Clave                                       | Descripción                                               |
-| -------------- | -------------------------------------------------- | --------------------------------------------------------- |
-| `alerta_stock` | id, id_inventario, fecha_generacion, estado_alerta | Alertas automáticas cuando `stock_actual <= stock_minimo` |
-
-### 8. Índices de Optimización
-
-```sql
-CREATE NONCLUSTERED INDEX IX_producto_variante_codigo ON producto_variante(codigo_barras);
-CREATE NONCLUSTERED INDEX IX_venta_cabecera_fecha ON venta_cabecera(fecha_venta);
-CREATE NONCLUSTERED INDEX IX_compra_cabecera_fecha ON compra_cabecera(fecha_compra);
-CREATE NONCLUSTERED INDEX IX_historial_movimiento_fecha ON historial_movimiento(fecha_movimiento);
-```
-
----
-
-## Sistema de Auditoría y Actividad
-
-### Tabla `auditoria_sesion` (BD SQL Server)
-
-Registra **sesiones de login/logout** de empleados:
-
-```sql
-CREATE TABLE auditoria_sesion (
-    id_sesion INT IDENTITY(1,1),
-    id_empleado INT NOT NULL,
-    fecha_ingreso DATETIME DEFAULT GETDATE(),
-    fecha_salida DATETIME NULL,
-    direccion_ip VARCHAR(50) NULL,
-);
-```
-
-**Uso en la BD:** Tracking de quién inició sesión, cuándo, y desde qué IP.
-
-### Tabla `actividad_log` (BD SQL Server)
-
-Registra **acciones realizadas** en el sistema (crear, editar, vender, etc.):
-
-```sql
-CREATE TABLE actividad_log (
-    id_actividad INT IDENTITY(1,1),
-    id_empleado INT NOT NULL,
-    tipo_accion VARCHAR(50) NOT NULL,
-    detalle VARCHAR(500) NOT NULL,
-    fecha DATETIME DEFAULT GETDATE() NOT NULL,
-    CONSTRAINT FK_actividad_empleado FOREIGN KEY (id_empleado) REFERENCES empleado(id_empleado)
-);
-
-CREATE NONCLUSTERED INDEX IX_actividad_log_fecha ON actividad_log(fecha);
-CREATE NONCLUSTERED INDEX IX_actividad_log_empleado ON actividad_log(id_empleado);
-```
-
-**Uso en la BD:** Audit trail completo de todas las acciones del sistema. Cuando se migre a backend, cada `log()` debería INSERT en esta tabla.
-
-### Contexto `ActivityContext.tsx` (Aplicación actual)
-
-Implementación local de **log de actividad** en la app, almacenado en AsyncStorage (key `@audit_log`). Es un espejo de `actividad_log` pero sin backend. Cuando se conecte a la BD, este contexto debería hacer llamadas a la API en vez de escribir a AsyncStorage.
-
-**Estructura del registro (`AuditoriaSesion`):**
-
-```typescript
-interface AuditoriaSesion {
-  id: number; // Date.now()
-  id_empleado: number; // ID del empleado que realizó la acción
-  tipo_accion: TipoAccion; // Tipo de acción (ver abajo)
-  detalle: string; // Descripción legible de la acción
-  fecha: string; // ISO timestamp
-}
-```
-
-**Tipos de acción registrados (`TipoAccion`):**
-
-| Acción             | Descripción                   | Pantalla que la registra             |
-| ------------------ | ----------------------------- | ------------------------------------ |
-| `LOGIN`            | Inicio de sesión              | `login.tsx`                          |
-| `LOGOUT`           | Cierre de sesión              | `Sidebar.tsx`, `DashboardLayout.tsx` |
-| `STOCK_UPDATE`     | Entrada/salida de stock       | `inventario.tsx`                     |
-| `SALE_COMPLETED`   | Venta completada              | `ventas.tsx` (admin + collaborator)  |
-| `PRODUCT_CREATED`  | Producto creado               | `productos.tsx`                      |
-| `PRODUCT_UPDATED`  | Producto editado              | `productos.tsx`                      |
-| `PRODUCT_TOGGLED`  | Producto activado/desactivado | `productos.tsx`                      |
-| `VARIANT_CREATED`  | Variante creada               | `productos.tsx`                      |
-| `VARIANT_DELETED`  | Variante eliminada            | `productos.tsx`                      |
-| `EMPLOYEE_CREATED` | Empleado creado               | `usuarios.tsx`                       |
-| `EMPLOYEE_UPDATED` | Empleado editado              | `usuarios.tsx`                       |
-| `EMPLOYEE_TOGGLED` | Empleado activado/desactivado | `usuarios.tsx`                       |
-| `SETTINGS_CHANGED` | Configuración modificada      | `config.tsx`                         |
-
-**Pantalla de actividad:** `app/(admin)/actividad.tsx` muestra el historial de acciones con filtros por empleado y rango de fechas.
-
-**Limitaciones actuales:**
-
-- Almacena máximo 500 registros (los más viejos se eliminan)
-- Solo disponible para rol Admin
-- No sincroniza con la BD SQL Server (es solo local)
-- **Migración a producción:** `ActivityContext.log()` debería hacer `POST /api/actividad` y la pantalla debería hacer `GET /api/actividad` desde `actividad_log`
-
----
-
-## Estructura de Código
-
-### Pantallas (`app/`)
-
-| Archivo       | Descripción                | Tablas BD                               |
-| ------------- | -------------------------- | --------------------------------------- |
-| `_layout.tsx` | Layout raíz con providers  | —                                       |
-| `index.tsx`   | Landing page               | —                                       |
-| `login.tsx`   | Login + registro de sesión | `empleado`, `cargo`, `auditoria_sesion` |
-
-#### Admin (`app/(admin)/`)
-
-| Archivo          | Descripción                          | Tablas BD                                                                                    |
-| ---------------- | ------------------------------------ | -------------------------------------------------------------------------------------------- |
-| `index.tsx`      | Dashboard con KPIs + ganancias       | `venta_cabecera`, `venta_detalle`, `historial_movimiento`, `inventario`                      |
-| `productos.tsx`  | CRUD productos + variantes + precios | `producto`, `producto_variante`, `marca`, `categoria`, `genero`, `talla`, `color`            |
-| `inventario.tsx` | Stock + movimientos + costos         | `inventario`, `historial_movimiento`, `tipo_movimiento`, `producto_variante`                 |
-| `ventas.tsx`     | POS + historial + ganancias          | `venta_cabecera`, `venta_detalle`, `producto_variante`, `inventario`, `historial_movimiento` |
-| `usuarios.tsx`   | CRUD empleados                       | `empleado`, `cargo`                                                                          |
-| `actividad.tsx`  | Log de auditoría                     | `actividad_log`                                                                              |
-| `config.tsx`     | Configuración del negocio            | —                                                                                            |
-
-#### Collaborator (`app/(collaborator)/`)
-
-| Archivo           | Descripción                    | Tablas BD                                                            |
-| ----------------- | ------------------------------ | -------------------------------------------------------------------- |
-| `index.tsx`       | Dashboard con KPIs + ganancias | `venta_cabecera`, `venta_detalle`, `inventario`                      |
-| `productos.tsx`   | Solo lectura productos         | `producto`, `producto_variante`, `marca`, `categoria`, `genero`      |
-| `ventas.tsx`      | POS colaborador                | `venta_cabecera`, `venta_detalle`, `producto_variante`, `inventario` |
-| `buscar.tsx`      | Búsqueda de productos          | `producto`, `producto_variante`                                      |
-| `stock.tsx`       | Solo lectura stock             | `inventario`, `producto_variante`, `producto`                        |
-| `movimientos.tsx` | Movimientos (legacy)           | `producto`                                                           |
-
-### Contextos (`context/`)
-
-| Archivo                | Descripción                          | Tablas BD                                                                                    |
-| ---------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------- |
-| `AuthContext.tsx`      | Autenticación y sesión               | `empleado`, `cargo`                                                                          |
-| `UsersContext.tsx`     | CRUD empleados                       | `empleado`, `cargo`                                                                          |
-| `CatalogsContext.tsx`  | Catálogos (marcas, categorías, etc.) | `marca`, `categoria`, `genero`, `talla`, `color`, `tipo_movimiento`, `cargo`                 |
-| `ProductsContext.tsx`  | Productos + variantes + inventario   | `producto`, `producto_variante`, `inventario`                                                |
-| `InventoryContext.tsx` | Historial de movimientos             | `historial_movimiento`                                                                       |
-| `SalesContext.tsx`     | Ventas + carrito                     | `venta_cabecera`, `venta_detalle`, `producto_variante`, `inventario`, `historial_movimiento` |
-| `SettingsContext.tsx`  | Configuración                        | —                                                                                            |
-| `ActivityContext.tsx`  | Log de actividad (custom)            | `actividad_log`                                                                              |
-
-### Componentes (`components/`)
-
-| Archivo               | Descripción                                     |
-| --------------------- | ----------------------------------------------- |
-| `AlertModal.tsx`      | Modal de alerta/confirmación                    |
-| `BottomTabBar.tsx`    | Navegación inferior móvil                       |
-| `DashboardLayout.tsx` | Layout responsive (sidebar desktop, tabs móvil) |
-| `DashboardShell.tsx`  | Shell del dashboard                             |
-| `PaymentModal.tsx`    | Modal de selección de método de pago            |
-| `ReceiptModal.tsx`    | Modal de comprobante de venta                   |
-| `Sidebar.tsx`         | Sidebar desktop                                 |
-
-#### UI Components (`components/ui/`)
-
-| Archivo               | Descripción                    |
-| --------------------- | ------------------------------ |
-| `HapticButton.tsx`    | Botón con feedback háptico     |
-| `ActivityItem.tsx`    | Item de historial de actividad |
-| `Card.tsx`            | Componente card reutilizable   |
-| `KPICard.tsx`         | Tarjeta KPI del dashboard      |
-| `ProductList.tsx`     | Lista de productos             |
-| `index.ts`            | Barrel export de UI components |
-
-### Hooks (`hooks/`)
-
-| Archivo               | Descripción                              |
-| --------------------- | ---------------------------------------- |
-| `useTranslation.ts`   | Hook para traducciones español/inglés    |
-| `useThemeColors.ts`   | Hook para colores del tema               |
-
-### Tipos (`types/`)
-
-| Archivo       | Descripción                                       |
-| ------------- | ------------------------------------------------- |
-| `database.ts` | Interfaces TypeScript basadas en la BD SQL Server |
-| `index.ts`    | Re-exporta tipos + tipos de auth                  |
-
-### Constantes (`constants/`)
-
-| Archivo           | Descripción                                             |
-| ----------------- | ------------------------------------------------------- |
-| `navigation.ts`   | Items de navegación (admin + colaborador)               |
-| `translations.ts` | Traducciones español/inglés                             |
-| `theme.ts`        | Colores, espaciados, bordes, sombras, tamaños de fuente |
-
----
-
-## Flujo de Datos
-
-### Inventario (Entrada/Salida)
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                    ENTRADA                              │
-├─────────────────────────────────────────────────────────┤
-│ 1. Usuario presiona "Entrada" en tarjeta de stock      │
-│ 2. Se abre modal con:                                  │
-│    - Stock actual + precios (compra/venta/margen)       │
-│    - Tipo: Compra (1) o Ajuste positivo (2)            │
-│    - Cantidad + costo total calculado                   │
-│    - Notas (opcional)                                   │
-│ 3. Al guardar:                                          │
-│    ├─ increaseStock(varianteId, cantidad)               │
-│    │   └─ inventario.stock_actual += cantidad           │
-│    └─ addMovement({ tipo: 1 o 2, cantidad })           │
-│        └─ historial_movimiento (registro)               │
-└─────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────┐
-│                    SALIDA                               │
-├─────────────────────────────────────────────────────────┤
-│ 1. Usuario presiona "Salida" en tarjeta de stock       │
-│ 2. Se abre modal con:                                  │
-│    - Stock actual + precios                             │
-│    - Tipo: Ajuste negativo (3) o Merma (4)             │
-│    - Cantidad + pérdida calculada                       │
-│    - Notas (opcional)                                   │
-│ 3. Al guardar:                                          │
-│    ├─ Validación: stock_actual >= cantidad              │
-│    ├─ decreaseStock(varianteId, cantidad)               │
-│    │   └─ inventario.stock_actual -= cantidad           │
-│    └─ addMovement({ tipo: 3 o 4, cantidad })           │
-│        └─ historial_movimiento (registro)               │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Ventas (POS)
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                    VENTA                                │
-├─────────────────────────────────────────────────────────┤
-│ 1. Usuario selecciona producto en POS                   │
-│ 2. Se abre modal de variante (talla/color/precio)      │
-│ 3. Se agrega al carrito (muestra ganancia estimada)     │
-│ 4. Al completar venta:                                  │
-│    ├─ Crea venta_cabecera (fecha, total, IGV, método)   │
-│    ├─ Por cada item del carrito:                        │
-│    │   ├─ Crea venta_detalle (variante, cantidad,       │
-│    │   │   precio_unitario = variante.precio_venta)     │
-│    │   ├─ decreaseStock(varianteId, cantidad)           │
-│    │   └─ addMovement({ tipo: 3 (ajuste negativo) })   │
-│    └─ Registra log de actividad                         │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Cálculo de Ganancias
-
-```
-Ganancia por venta = Σ (precio_venta - precio_compra) × cantidad
-
-Dashboard:
-- Ganancia hoy: Σ ganancias de ventas de hoy
-- Ganancia total: Σ ganancias de todas las ventas
-
-POS (carrito):
-- Muestra ganancia estimada en tiempo real
-
-Historial de ventas:
-- Cada venta muestra +S/ X.XX de ganancia
-- Cada línea de detalle muestra ganancia individual
-```
-
-### Productos
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                    PRODUCTO                             │
-├─────────────────────────────────────────────────────────┤
-│ Tablas: producto, producto_variante, inventario         │
-│                                                         │
-│ - CRUD de producto base (marca, categoría, género)      │
-│ - CRUD de variantes (talla, color, precios, código)     │
-│ - Validación: precio_venta >= precio_compra             │
-│ - Cada variante crea automáticamente registro           │
-│   en inventario (stock_actual=0, stock_minimo=5)        │
-│ - Stock inicial crea movimiento tipo 1 (Compra)         │
-│ - Activar/desactivar producto                           │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Usuarios
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                    USUARIOS                             │
-├─────────────────────────────────────────────────────────┤
-│ Tablas: empleado, cargo                                 │
-│                                                         │
-│ - CRUD de empleados (nombres, apellidos, documento)     │
-│ - Asignación de cargo (Administrador, Vendedor, etc.)   │
-│ - Activar/desactivar empleado                           │
-│ - Credenciales gestionadas fuera del repositorio        │
-└─────────────────────────────────────────────────────────┘
-```
-
----
-
-## Variables de Entorno
-
-No se requieren variables de entorno. La aplicación no utiliza servicios externos, APIs ni bases de datos remotas. Todos los datos se almacenan localmente en el dispositivo mediante AsyncStorage.
-
----
-
-## Plataformas Soportadas
-
-- **iOS** (con soporte para iPad)
-- **Android** (icono adaptativo, edge-to-edge)
-- **Web** (modo output estático)
-
----
-
-## Licencia
-
-Proyecto privado.
+## Seguridad
+
+- RLS activo en todas las tablas públicas.
+- Funciones internas sin acceso `anon`.
+- Contraseñas gestionadas por Supabase Auth.
+- No se guardan contraseñas en el repositorio.
+- `app_errors` registra errores del cliente y solo lo leen administradores.
+- Repositorio privado obligatorio.
+
+## Pendientes conocidos
+
+- Probar una restauración real de backup.
+- Implementar detalle completo en botones “Ver” de compras.
+- Implementar conversión real del botón “Cotizar” de pedidos.
+- Mover actividad/ajustes locales a Supabase si se requiere multiusuario.
+- Configurar monitoreo externo/alerts si se desea.
+- Confirmar política de retención de errores y backups.
