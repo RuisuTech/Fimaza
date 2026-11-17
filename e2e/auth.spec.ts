@@ -32,6 +32,27 @@ test('admin can log in, open users and see role options', async ({ page }) => {
   await expect(page.getByText('Almacenero', { exact: true }).first()).toBeVisible();
 });
 
+test('admin can open all operational modules', async ({ page }) => {
+  test.skip(!adminEmail || !adminPassword, 'Admin E2E credentials are not configured');
+
+  await login(page, adminEmail!, adminPassword!);
+  await expect(page.getByText('Panel principal', { exact: true })).toBeVisible();
+
+  const modules = [
+    ['/clientes', 'Registro de clientes'],
+    ['/productos', 'Registro de productos'],
+    ['/proveedores', 'Registro de proveedores'],
+    ['/ventas/carrito', 'Carrito de compras'],
+    ['/almacen/inventario', 'Generar inventario'],
+    ['/compras/pedidos', 'Pedidos de compra'],
+  ] as const;
+
+  for (const [route, title] of modules) {
+    await page.goto(route);
+    await expect(page.getByText(title, { exact: true })).toBeVisible();
+  }
+});
+
 test('admin can export the sales report as CSV', async ({ page }) => {
   test.skip(!adminEmail || !adminPassword, 'Admin E2E credentials are not configured');
 
