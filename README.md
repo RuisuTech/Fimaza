@@ -41,14 +41,9 @@ Esto abrirá el Expo DevTools en el navegador. Desde ahí puedes:
 - **Simulador iOS**: Presiona `i` en la terminal.
 - **Emulador Android**: Presiona `a` en la terminal.
 
-### Credenciales por defecto
+### Credenciales
 
-| Rol           | Usuario       | Email                | Contraseña |
-| ------------- | ------------- | -------------------- | ---------- |
-| Administrador | `admin`       | `admin@fimaza.com`   | `admin123` |
-| Colaborador   | `vendedora01` | `user@fimaza.com`    | `user123`  |
-
-También se puede iniciar sesión con el DNI demo: `12345678` o `87654321`.
+Las credenciales de acceso no se publican en el repositorio. Se entregan por un canal seguro y deben rotarse si alguna vez se compartieron en texto plano.
 
 ### Scripts Disponibles
 
@@ -521,9 +516,7 @@ Historial de ventas:
 │ - CRUD de empleados (nombres, apellidos, documento)     │
 │ - Asignación de cargo (Administrador, Vendedor, etc.)   │
 │ - Activar/desactivar empleado                           │
-│ - Credenciales por defecto:                             │
-│   Admin: admin@inventario.com / admin123                │
-│   User: user@inventario.com / user123                   │
+│ - Credenciales gestionadas fuera del repositorio        │
 └─────────────────────────────────────────────────────────┘
 ```
 

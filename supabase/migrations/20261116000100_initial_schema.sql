@@ -158,8 +158,8 @@ on conflict (id) do nothing;
 insert into public.empleados
   (id, id_cargo, nombres, apellidos, documento_identidad, usuario, email, password_hash, estado)
 values
-  (1, 1, 'Usuario', 'Admin', '12345678', 'admin', 'admin@fimaza.com', 'admin123', true),
-  (2, 2, 'Usuario', 'Vendedor', '87654321', 'vendedora01', 'user@fimaza.com', 'user123', true)
+  (1, 1, 'Usuario', 'Admin', '12345678', 'admin', 'admin@fimaza.com', 'supabase-auth', true),
+  (2, 2, 'Usuario', 'Vendedor', '87654321', 'vendedora01', 'user@fimaza.com', 'supabase-auth', true)
 on conflict (id) do update set
   id_cargo = excluded.id_cargo,
   nombres = excluded.nombres,
