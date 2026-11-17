@@ -43,7 +43,13 @@ export default function PedidosCompraScreen() {
   const { suppliers } = useSuppliers();
   const { products, variants } = useProducts();
   const { tallas } = useCatalogs();
-  const { purchaseOrders, createPurchaseOrder } = usePurchases();
+  const {
+    purchaseOrders,
+    purchaseOrderDetails,
+    createPurchaseOrder,
+    createQuote,
+    updatePurchaseOrderStatus,
+  } = usePurchases();
   const [provider, setProvider] = useState('');
   const [productId, setProductId] = useState('');
   const [variantId, setVariantId] = useState('');
@@ -136,28 +142,91 @@ export default function PedidosCompraScreen() {
     {
       key: 'acciones',
       label: 'Acciones',
-      flex: 1.3,
+      flex: 2.1,
       align: 'center',
-      render: row => (
-        <View style={styles.actions}>
-          <AdminButton
-            label="Ver"
-            variant="secondary"
-            size="sm"
-            onPress={() =>
-              showAlert('info', `Pedido ${row.numero}`, `Total S/ ${row.total.toFixed(2)}`)
-            }
-          />
-          <AdminButton
-            label="Cotizar"
-            variant="dark"
-            size="sm"
-            onPress={() =>
-              showAlert('info', 'Cotización', `Se preparó una cotización para ${row.numero}.`)
-            }
-          />
-        </View>
-      ),
+      render: row => {
+        const details = purchaseOrderDetails.filter(detail => detail.id_pedido === row.id);
+        const providerName =
+          suppliers.find(item => item.id === row.id_proveedor)?.razon_social ?? '—';
+        const detailText = details
+          .map(detail => {
+            const variant = variants.find(item => item.id === detail.id_variante);
+            const product = products.find(item => item.id === variant?.id_producto);
+            const size = tallas.find(talla => talla.id === variant?.id_talla)?.numero_talla;
+            return `• ${product?.nombre ?? 'Producto'} · T${size ?? '—'} · ${detail.cantidad} un.`;
+          })
+          .join('\n');
+
+        return (
+          <View style={styles.actions}>
+            <AdminButton
+              label="Ver"
+              variant="secondary"
+              size="sm"
+              onPress={() =>
+                showAlert(
+                  'info',
+                  `Pedido ${row.numero}`,
+                  `${providerName}\nFecha: ${row.fecha}\nEstado: ${row.estado}\nTotal: S/ ${row.total.toFixed(2)}\n\n${detailText || 'Sin líneas registradas.'}`,
+                )
+              }
+            />
+            <AdminButton
+              label="Cotizar"
+              variant="dark"
+              size="sm"
+              onPress={async () => {
+                if (details.length === 0) {
+                  showAlert('warning', 'Sin líneas', 'El pedido no tiene detalle para cotizar.');
+                  return;
+                }
+                const result = await createQuote({
+                  providerId: row.id_proveedor,
+                  validUntil: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+                  lines: details.map(detail => ({
+                    variantId: detail.id_variante,
+                    cantidad: detail.cantidad,
+                    precioUnitario: detail.precio_unitario,
+                  })),
+                });
+                if (!result.success) {
+                  showAlert('error', 'No se pudo cotizar', result.error ?? 'Error al guardar.');
+                  return;
+                }
+                showAlert('success', 'Cotización creada', `Se generó desde ${row.numero}.`);
+              }}
+            />
+            {row.estado === 'Borrador' ? (
+              <AdminButton
+                label="Enviar"
+                size="sm"
+                onPress={async () => {
+                  const result = await updatePurchaseOrderStatus(row.id, 'Enviado');
+                  if (!result.success) {
+                    showAlert('error', 'No se pudo enviar', result.error ?? 'Error al guardar.');
+                    return;
+                  }
+                  showAlert('success', 'Pedido enviado', `${row.numero} pasó a Enviado.`);
+                }}
+              />
+            ) : null}
+            {row.estado === 'Enviado' ? (
+              <AdminButton
+                label="Atendido"
+                size="sm"
+                onPress={async () => {
+                  const result = await updatePurchaseOrderStatus(row.id, 'Atendido');
+                  if (!result.success) {
+                    showAlert('error', 'No se pudo actualizar', result.error ?? 'Error al guardar.');
+                    return;
+                  }
+                  showAlert('success', 'Pedido atendido', `${row.numero} pasó a Atendido.`);
+                }}
+              />
+            ) : null}
+          </View>
+        );
+      },
     },
   ];
 
@@ -281,7 +350,7 @@ export default function PedidosCompraScreen() {
               columns={columns}
               rows={purchaseOrders}
               keyExtractor={row => row.numero}
-              minWidth={720}
+              minWidth={860}
             />
           </AdminCard>
         </View>

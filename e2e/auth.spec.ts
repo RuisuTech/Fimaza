@@ -30,6 +30,8 @@ test('admin can log in, open users and see role options', async ({ page }) => {
   await expect(page.getByText('Administrador', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('Vendedora', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('Almacenero', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('vendedora01', { exact: true })).toBeVisible();
+  await expect(page.getByText('user@fimaza.com', { exact: true })).toBeVisible();
 });
 
 test('admin can open all operational modules', async ({ page }) => {

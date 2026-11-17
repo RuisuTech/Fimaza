@@ -65,6 +65,9 @@ interface PurchasesContextType {
   createPurchaseOrder: (input: CreatePurchaseOrderInput) => Promise<PurchaseResult>;
   createOrderFromQuote: (input: CreateOrderInput) => Promise<PurchaseResult>;
   createInvoice: (input: CreateInvoiceInput) => Promise<PurchaseResult>;
+  updatePurchaseOrderStatus: (id: number, status: string) => Promise<PurchaseResult>;
+  updateQuoteStatus: (id: number, status: string) => Promise<PurchaseResult>;
+  updateInvoiceStatus: (id: number, status: string) => Promise<PurchaseResult>;
 }
 
 const PurchasesContext = createContext<PurchasesContextType | undefined>(undefined);
@@ -296,6 +299,36 @@ export function PurchasesProvider({ children }: { children: ReactNode }) {
     return { success: true };
   };
 
+  const updatePurchaseOrderStatus = async (
+    id: number,
+    status: string,
+  ): Promise<PurchaseResult> => {
+    const { error } = await supabase.from('pedidos_compra').update({ estado: status }).eq('id', id);
+    if (error) return { success: false, error: error.message };
+    await refresh();
+    return { success: true };
+  };
+
+  const updateQuoteStatus = async (id: number, status: string): Promise<PurchaseResult> => {
+    const { error } = await supabase
+      .from('cotizaciones_compra')
+      .update({ estado: status })
+      .eq('id', id);
+    if (error) return { success: false, error: error.message };
+    await refresh();
+    return { success: true };
+  };
+
+  const updateInvoiceStatus = async (id: number, status: string): Promise<PurchaseResult> => {
+    const { error } = await supabase
+      .from('facturas_compra')
+      .update({ estado: status })
+      .eq('id', id);
+    if (error) return { success: false, error: error.message };
+    await refresh();
+    return { success: true };
+  };
+
   return (
     <PurchasesContext.Provider
       value={{
@@ -312,6 +345,9 @@ export function PurchasesProvider({ children }: { children: ReactNode }) {
         createPurchaseOrder,
         createOrderFromQuote,
         createInvoice,
+        updatePurchaseOrderStatus,
+        updateQuoteStatus,
+        updateInvoiceStatus,
       }}
     >
       {children}

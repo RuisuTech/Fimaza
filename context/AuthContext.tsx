@@ -46,7 +46,6 @@ async function getMyProfile(): Promise<Empleado | null> {
     documento_identidad: row.documento_identidad,
     usuario: row.usuario ?? undefined,
     email: row.email ?? undefined,
-    password_hash: '',
     estado: Boolean(row.estado),
   };
 }

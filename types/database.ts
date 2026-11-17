@@ -67,7 +67,6 @@ export interface Empleado {
   documento_identidad: string;
   usuario?: string;
   email?: string;
-  password_hash: string;
   estado: boolean;
   // Resolved
   cargo?: Cargo;

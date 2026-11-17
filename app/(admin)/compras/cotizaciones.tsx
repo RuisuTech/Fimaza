@@ -30,7 +30,8 @@ export default function CotizacionesScreen() {
   const { suppliers } = useSuppliers();
   const { products, variants } = useProducts();
   const { tallas } = useCatalogs();
-  const { quotes, createQuote, createOrderFromQuote } = usePurchases();
+  const { quotes, quoteDetails, createQuote, createOrderFromQuote, updateQuoteStatus } =
+    usePurchases();
   const [provider, setProvider] = useState('');
   const [productId, setProductId] = useState('');
   const [variantId, setVariantId] = useState('');
@@ -96,33 +97,72 @@ export default function CotizacionesScreen() {
     {
       key: 'acciones',
       label: 'Acciones',
-      flex: 1.3,
+      flex: 1.8,
       align: 'center',
-      render: row => (
-        <View style={styles.actions}>
-          <AdminButton
-            label="Ver"
-            variant="secondary"
-            size="sm"
-            onPress={() =>
-              showAlert('info', `Cotización ${row.numero}`, `Total S/ ${row.total.toFixed(2)}`)
-            }
-          />
-          <AdminButton
-            label="Generar orden"
-            variant="dark"
-            size="sm"
-            onPress={async () => {
-              const result = await createOrderFromQuote({ quoteId: row.id });
-              if (!result.success) {
-                showAlert('error', 'No se pudo generar', result.error ?? 'Error al guardar.');
-                return;
+      render: row => {
+        const details = quoteDetails.filter(detail => detail.id_cotizacion === row.id);
+        const providerName =
+          suppliers.find(item => item.id === row.id_proveedor)?.razon_social ?? '—';
+        const detailText = details
+          .map(detail => {
+            const variant = variants.find(item => item.id === detail.id_variante);
+            const product = products.find(item => item.id === variant?.id_producto);
+            const size = tallas.find(talla => talla.id === variant?.id_talla)?.numero_talla;
+            return `• ${product?.nombre ?? 'Producto'} · T${size ?? '—'} · ${detail.cantidad} un. · S/ ${detail.precio_unitario.toFixed(2)}`;
+          })
+          .join('\n');
+
+        return (
+          <View style={styles.actions}>
+            <AdminButton
+              label="Ver"
+              variant="secondary"
+              size="sm"
+              onPress={() =>
+                showAlert(
+                  'info',
+                  `Cotización ${row.numero}`,
+                  `${providerName}\nVálida hasta: ${row.valida_hasta ?? '—'}\nEstado: ${row.estado}\nTotal: S/ ${row.total.toFixed(2)}\n\n${detailText || 'Sin líneas registradas.'}`,
+                )
               }
-              showAlert('success', 'Orden generada', `Se generó una orden desde ${row.numero}.`);
-            }}
-          />
-        </View>
-      ),
+            />
+            {row.estado !== 'Rechazada' ? (
+              <AdminButton
+                label="Generar orden"
+                variant="dark"
+                size="sm"
+                onPress={async () => {
+                  const result = await createOrderFromQuote({ quoteId: row.id });
+                  if (!result.success) {
+                    showAlert('error', 'No se pudo generar', result.error ?? 'Error al guardar.');
+                    return;
+                  }
+                  showAlert(
+                    'success',
+                    'Orden generada',
+                    `Se generó una orden desde ${row.numero}.`,
+                  );
+                }}
+              />
+            ) : null}
+            {row.estado === 'Pendiente' ? (
+              <AdminButton
+                label="Rechazar"
+                variant="danger"
+                size="sm"
+                onPress={async () => {
+                  const result = await updateQuoteStatus(row.id, 'Rechazada');
+                  if (!result.success) {
+                    showAlert('error', 'No se pudo rechazar', result.error ?? 'Error al guardar.');
+                    return;
+                  }
+                  showAlert('success', 'Cotización rechazada', `${row.numero} fue rechazada.`);
+                }}
+              />
+            ) : null}
+          </View>
+        );
+      },
     },
   ];
 
@@ -227,7 +267,7 @@ export default function CotizacionesScreen() {
               columns={columns}
               rows={quotes}
               keyExtractor={row => row.numero}
-              minWidth={760}
+              minWidth={880}
             />
           </AdminCard>
         </View>

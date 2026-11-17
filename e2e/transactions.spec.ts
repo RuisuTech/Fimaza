@@ -195,10 +195,16 @@ test('critical transactional flows persist and keep stock consistent', async () 
       p_emission: new Date().toISOString().slice(0, 10),
       p_due_date: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
       p_amount: 236,
-      p_status: 'Pagada',
+      p_status: 'Pendiente',
     });
     expect(invoice.error).toBeNull();
     created.invoice = Number(invoice.data.id);
+
+    const paidInvoice = await admin
+      .from('facturas_compra')
+      .update({ estado: 'Pagada' })
+      .eq('id', invoice.data.id);
+    expect(paidInvoice.error).toBeNull();
 
     orderState = await admin
       .from('ordenes_compra')
@@ -215,6 +221,32 @@ test('critical transactional flows persist and keep stock consistent', async () 
     });
     expect(purchase.error).toBeNull();
     created.purchase = Number(purchase.data.id);
+
+    let purchaseState = await admin
+      .from('pedidos_compra')
+      .update({ estado: 'Enviado' })
+      .eq('id', purchase.data.id);
+    expect(purchaseState.error).toBeNull();
+    purchaseState = await admin
+      .from('pedidos_compra')
+      .update({ estado: 'Atendido' })
+      .eq('id', purchase.data.id);
+    expect(purchaseState.error).toBeNull();
+
+    const rejectedQuote = await admin.rpc('create_quote', {
+      p_provider_id: 1,
+      p_fecha: new Date().toISOString().slice(0, 10),
+      p_valid_until: null,
+      p_lines: [{ variant_id: variantId, cantidad: 1, precio_unitario: 50 }],
+    });
+    expect(rejectedQuote.error).toBeNull();
+    created.rejectedQuote = Number(rejectedQuote.data.id);
+
+    const rejected = await admin
+      .from('cotizaciones_compra')
+      .update({ estado: 'Rechazada' })
+      .eq('id', rejectedQuote.data.id);
+    expect(rejected.error).toBeNull();
 
     if (collaboratorEmail && collaboratorPassword) {
       result = await collaborator.auth.signInWithPassword({
@@ -260,6 +292,8 @@ async function cleanup(
   if (created.invoice) await admin.from('facturas_compra').delete().eq('id', created.invoice);
   if (created.order) await admin.from('ordenes_compra').delete().eq('id', created.order);
   if (created.quote) await admin.from('cotizaciones_compra').delete().eq('id', created.quote);
+  if (created.rejectedQuote)
+    await admin.from('cotizaciones_compra').delete().eq('id', created.rejectedQuote);
   if (created.purchase) await admin.from('pedidos_compra').delete().eq('id', created.purchase);
   if (created.exitGuide) await admin.from('guias_salida').delete().eq('id', created.exitGuide);
   if (created.entryGuide) await admin.from('guias_entrada').delete().eq('id', created.entryGuide);

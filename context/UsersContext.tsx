@@ -63,7 +63,6 @@ function mapEmployee(row: any): Empleado {
     documento_identidad: row.documento_identidad,
     usuario: row.usuario ?? undefined,
     email: row.email ?? undefined,
-    password_hash: '',
     estado: Boolean(row.estado),
   };
 }
@@ -153,7 +152,6 @@ export function UsersProvider({ children }: { children: ReactNode }) {
       documento_identidad: employee.documento_identidad ?? data.documento_identidad,
       usuario: employee.usuario ?? data.usuario,
       email: employee.email ?? data.email,
-      password_hash: '',
       estado: Boolean(employee.estado),
     };
 

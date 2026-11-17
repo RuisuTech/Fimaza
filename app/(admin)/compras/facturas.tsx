@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import AdminPage from '@/components/admin/AdminPage';
 import AdminCard from '@/components/admin/AdminCard';
 import AdminButton from '@/components/admin/AdminButton';
@@ -22,10 +22,14 @@ const STATUS_TONES: Record<string, BadgeTone> = {
   Vencida: 'danger',
 };
 
+const styles = StyleSheet.create({
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center' },
+});
+
 export default function FacturasCompraScreen() {
   const { isDesktop } = useAdminLayout();
   const { alert, showAlert, closeAlert } = useAdminAlert();
-  const { orders, invoices, createInvoice } = usePurchases();
+  const { orders, invoices, createInvoice, updateInvoiceStatus } = usePurchases();
   const { suppliers } = useSuppliers();
   const [serie, setSerie] = useState('F001');
   const [number, setNumber] = useState('000046');
@@ -95,18 +99,48 @@ export default function FacturasCompraScreen() {
     {
       key: 'acciones',
       label: 'Acciones',
-      flex: 0.8,
+      flex: 1.3,
       align: 'center',
-      render: row => (
-        <AdminButton
-          label="Ver"
-          variant="secondary"
-          size="sm"
-          onPress={() =>
-            showAlert('info', `Factura ${row.serie}-${row.numero}`, `Total S/ ${row.monto.toFixed(2)}`)
-          }
-        />
-      ),
+      render: row => {
+        const providerName =
+          suppliers.find(item => item.id === row.id_proveedor)?.razon_social ?? '—';
+        const orderNumber =
+          orders.find(order => order.id === row.id_orden_compra)?.numero ?? '—';
+        return (
+          <View style={styles.actions}>
+            <AdminButton
+              label="Ver"
+              variant="secondary"
+              size="sm"
+              onPress={() =>
+                showAlert(
+                  'info',
+                  `Factura ${row.serie}-${row.numero}`,
+                  `${providerName}\nOrden: ${orderNumber}\nEmisión: ${row.fecha_emision}\nVencimiento: ${row.fecha_vencimiento ?? '—'}\nEstado: ${row.estado}\nMonto: S/ ${row.monto.toFixed(2)}`,
+                )
+              }
+            />
+            {row.estado !== 'Pagada' ? (
+              <AdminButton
+                label="Pagar"
+                size="sm"
+                onPress={async () => {
+                  const result = await updateInvoiceStatus(row.id, 'Pagada');
+                  if (!result.success) {
+                    showAlert('error', 'No se pudo pagar', result.error ?? 'Error al guardar.');
+                    return;
+                  }
+                  showAlert(
+                    'success',
+                    'Factura pagada',
+                    `${row.serie}-${row.numero} quedó pagada.`,
+                  );
+                }}
+              />
+            ) : null}
+          </View>
+        );
+      },
     },
   ];
 
@@ -233,7 +267,7 @@ export default function FacturasCompraScreen() {
               columns={columns}
               rows={invoices}
               keyExtractor={row => `${row.serie}-${row.numero}`}
-              minWidth={780}
+              minWidth={880}
             />
           </AdminCard>
         </View>

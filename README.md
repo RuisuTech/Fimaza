@@ -104,6 +104,7 @@ Migraciones en `supabase/migrations/`:
 - `app_errors`: registro de errores del cliente.
 - `business_states_audit`: estados automáticos y auditoría.
 - `revoke_extra_function_access`: permisos mínimos para funciones.
+- `employee_table_grants`: privilegios RLS para el perfil de empleados y eliminación de `password_hash`.
 
 El esquema SQL Server original queda como referencia en `database/`.
 
@@ -131,7 +132,7 @@ El modelo está normalizado alrededor de catálogos, personas, productos, invent
 | `proveedores` | Proveedores de mercadería | Referenciado por compras y guías de entrada |
 | `auth.users` | Usuarios de Supabase Auth | Gestionado por Supabase; se vincula con `empleados.auth_user_id` |
 
-`empleados` guarda `usuario`, `email`, `documento_identidad`, `estado` y `password_hash` queda fuera del acceso público. La contraseña real vive en Supabase Auth.
+`empleados` guarda `usuario`, `email`, `documento_identidad` y `estado`. La contraseña vive únicamente en Supabase Auth.
 
 #### Productos e inventario
 
@@ -191,6 +192,13 @@ Estados permitidos:
 - `cotizaciones_compra`: `Pendiente`, `Aceptada`, `Rechazada`
 - `ordenes_compra`: `Emitida`, `Recibida`, `Pagada`
 - `facturas_compra`: `Pendiente`, `Pagada`, `Vencida`
+
+Flujo operativo:
+
+1. El pedido nace en `Borrador`, se envía al proveedor (`Enviado`) y se cierra al recibirse (`Atendido`).
+2. Desde un pedido se genera una cotización; la cotización puede aceptarse (generando una orden) o rechazarse.
+3. La orden pasa a `Recibida` al registrar una guía de entrada y a `Pagada` al pagar su factura.
+4. Los botones **Ver** muestran proveedor, fechas, estado, total y líneas del documento.
 
 #### Operación y auditoría
 
@@ -424,8 +432,6 @@ e2e/                Pruebas Playwright
 ## Pendientes conocidos
 
 - Probar una restauración real de backup.
-- Implementar detalle completo en botones “Ver” de compras.
-- Implementar conversión real del botón “Cotizar” de pedidos.
 - Mover actividad/ajustes locales a Supabase si se requiere multiusuario.
 - Configurar monitoreo externo/alerts si se desea.
 - Confirmar política de retención de errores y backups.
