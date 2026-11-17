@@ -34,6 +34,17 @@ interface UsersContextType {
 
 const UsersContext = createContext<UsersContextType | undefined>(undefined);
 
+async function getFunctionMessage(error: unknown, fallback: string): Promise<string> {
+  const response = (error as { context?: Response } | null)?.context;
+  if (response && typeof response.json === 'function') {
+    try {
+      const body = await response.json();
+      if (body && typeof body.error === 'string') return body.error;
+    } catch {}
+  }
+  return error instanceof Error ? error.message : fallback;
+}
+
 function mapEmployee(row: any): Empleado {
   return {
     id: Number(row.id),
@@ -114,10 +125,10 @@ export function UsersProvider({ children }: { children: ReactNode }) {
     );
 
     if (functionError) {
-      const message =
-        (response as { error?: string } | null)?.error ??
-        (functionError.message || 'No se pudo crear el usuario');
-      return { success: false, error: message };
+      return {
+        success: false,
+        error: await getFunctionMessage(functionError, 'No se pudo crear el usuario'),
+      };
     }
 
     const employee = (response as { employee?: any } | null)?.employee;
@@ -173,16 +184,16 @@ export function UsersProvider({ children }: { children: ReactNode }) {
       payload.email = updates.email.trim().toLowerCase();
     }
 
-    const { data: response, error: functionError } = await supabase.functions.invoke(
+    const { error: functionError } = await supabase.functions.invoke(
       'admin-update-employee',
       { body: payload },
     );
 
     if (functionError) {
-      const message =
-        (response as { error?: string } | null)?.error ??
-        (functionError.message || 'No se pudo actualizar el usuario');
-      return { success: false, error: message };
+      return {
+        success: false,
+        error: await getFunctionMessage(functionError, 'No se pudo actualizar el usuario'),
+      };
     }
 
     setEmployees(previous =>
